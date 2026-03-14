@@ -1,0 +1,15 @@
+build/
+.cache/
+compile_commands.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+python/mach/_mach_ext*.so
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -1,0 +1,7 @@
+CompileFlags:
+  # Strip CMake module dependency map response files (@*.modmap).
+  # clangd cannot parse these and they prevent it from indexing .cppm files.
+  Remove: ["@*"]
+  # Force C++23 for all files — clangd drops the std flag when inferring
+  # commands for .cppm files not directly listed in compile_commands.json.
+  Add: ["-std=c++23"]
