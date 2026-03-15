@@ -1,4 +1,9 @@
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest/doctest.h>
 
-// Placeholder — add TEST_CASE blocks here as modules come online.
+auto main(int argc, char** argv) -> int {
+    doctest::Context ctx {argc, argv};
+    ctx.setOption("success", true);
+
+    return ctx.run();
+}

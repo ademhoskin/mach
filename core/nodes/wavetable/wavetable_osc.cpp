@@ -1,7 +1,8 @@
-#include "core/nodes/wavetable_osc.hpp"
+#include "core/nodes/wavetable/wavetable_osc.hpp"
 
 #include "core/common/constants.hpp"
-#include "core/nodes/wavetable.hpp"
+#include "core/nodes/node.hpp"
+#include "core/nodes/wavetable/wavetable.hpp"
 
 namespace mach::nodes::wavetable {
 
@@ -59,5 +60,7 @@ void WavetableOscillator::bind_interpolated_sample_ptr() noexcept {
             break;
     }
 }
+
+static_assert(GeneratorNode<WavetableOscillator>);
 
 } // namespace mach::nodes::wavetable

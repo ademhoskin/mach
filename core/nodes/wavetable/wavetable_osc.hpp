@@ -1,3 +1,5 @@
+#pragma once
+
 #include "core/common/constants.hpp"
 
 #include <cstdint>

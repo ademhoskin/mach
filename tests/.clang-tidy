@@ -1,0 +1,6 @@
+InheritParentConfig: true
+
+Checks: >
+  -cppcoreguidelines-avoid-do-while,
+  -readability-function-cognitive-complexity,
+  -readability-identifier-length,

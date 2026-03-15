@@ -75,7 +75,8 @@ class Wavetable {
 
         const auto KNOWN_POINT_ONE {static_cast<std::size_t>(PHASE >> FRACTION_BITS) & IDX_MASK};
         const auto KNOWN_POINT_TWO {(KNOWN_POINT_ONE + 1UZ) & IDX_MASK};
-        const auto FLOAT_KNOWN_POINT_ONE_DIFF {static_cast<float>(PHASE & ((1U << FRACTION_BITS) - 1U)) * FRACTION_SCALE};
+        const auto FLOAT_KNOWN_POINT_ONE_DIFF {
+            static_cast<float>(PHASE & ((1U << FRACTION_BITS) - 1U)) * FRACTION_SCALE};
 
         const float SAMPLE_ONE {WAVETABLE[KNOWN_POINT_ONE]};
         const float SAMPLE_TWO {WAVETABLE[KNOWN_POINT_TWO]};
