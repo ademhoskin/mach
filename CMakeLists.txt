@@ -38,10 +38,8 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(nanobind)
 
 # --- Core C++ library ---
-add_library(mach_core STATIC
-  core/engine/engine.cpp
-  core/nodes/wavetable/wavetable_osc.cpp
-)
+file(GLOB_RECURSE MACH_CORE_SOURCES "core/**/*.cpp")
+add_library(mach_core STATIC ${MACH_CORE_SOURCES})
 target_include_directories(mach_core PUBLIC ${CMAKE_SOURCE_DIR} ${miniaudio_SOURCE_DIR})
 target_compile_options(mach_core PRIVATE -O3 -march=native -Wall -Wextra)
 
@@ -53,6 +51,12 @@ target_compile_options(mach_tests PRIVATE -O0 -g -Wall -Wextra)
 target_include_directories(mach_tests SYSTEM PRIVATE
   ${doctest_SOURCE_DIR}/doctest
 )
+
+# --- Benchmark ---
+add_executable(mach_bench bench/render_bench.cpp)
+target_link_libraries(mach_bench PRIVATE mach_core)
+target_compile_options(mach_bench PRIVATE -O3 -march=native)
+target_include_directories(mach_bench PRIVATE ${CMAKE_SOURCE_DIR})
 
 # --- nanobind extension ---
 nanobind_add_module(_mach_ext STABLE_ABI python/mach/bindings.cpp)
