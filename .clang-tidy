@@ -7,7 +7,7 @@ Checks: >
 
 
 WarningsAsErrors: "*"
-
+  
 HeaderFilterRegex: "(core|python)/.*"
 
 CheckOptions:
