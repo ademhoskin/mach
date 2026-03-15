@@ -6,7 +6,6 @@
 #include <atomic>
 #include <bit>
 #include <cstddef>
-#include <optional>
 #include <type_traits>
 
 namespace mach::ipc {
@@ -22,8 +21,7 @@ template<typename QueueElement, std::size_t QueueSize>
 
 class SPSCQueue {
   public:
-    // NOTE: we take by value and copy since we are assured T to be trivially copyable
-    [[nodiscard]] auto try_push(QueueElement item) noexcept -> bool {
+    [[nodiscard]] auto try_push(const QueueElement& item) noexcept -> bool {
         const auto OLD_WRITER_IDX {writer_idx_.load(std::memory_order_relaxed)};
         const auto NEW_WRITER_IDX {(OLD_WRITER_IDX + 1) & MASK};
         const auto CURRENT_READ_IDX {reader_idx_.load(std::memory_order_acquire)};
@@ -37,18 +35,18 @@ class SPSCQueue {
         return true;
     };
 
-    [[nodiscard]] auto try_pop() noexcept -> std::optional<QueueElement> {
+    [[nodiscard]] auto try_pop(QueueElement& popped_item) noexcept -> bool {
         const auto POPPED_VALUE_IDX {reader_idx_.load(std::memory_order_relaxed)};
         const auto NEW_READER_IDX {(POPPED_VALUE_IDX + 1) & MASK};
         const auto CURRENT_WRITER_IDX {writer_idx_.load(std::memory_order_acquire)};
 
         if (POPPED_VALUE_IDX == CURRENT_WRITER_IDX) {
-            return std::nullopt; // we are empty
+            return false; // we are empty
         }
+        popped_item = ring_buffer_[POPPED_VALUE_IDX];
 
-        QueueElement item {ring_buffer_[POPPED_VALUE_IDX]};
         reader_idx_.store(NEW_READER_IDX, std::memory_order_release);
-        return item;
+        return true;
     };
 
   private:
