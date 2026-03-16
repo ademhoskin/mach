@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <variant>
 
-namespace mach {
+namespace mach::engine {
 using NodeId = uint64_t;
 
 struct AddNodePayload {
@@ -23,4 +23,4 @@ struct SetNodeParamPayload {
 
 using CommandPayload = std::variant<AddNodePayload, RemoveNodePayload, SetNodeParamPayload>;
 
-} // namespace mach
+} // namespace mach::engine

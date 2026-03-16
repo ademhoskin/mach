@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(mach_core LANGUAGES CXX)
+project(mach_core LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -33,10 +33,11 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(nanobind)
 
-file(GLOB_RECURSE MACH_CORE_SOURCES "core/**/*.cpp")
+file(GLOB_RECURSE MACH_CORE_SOURCES "core/**/*.cpp" "core/**/*.c")
 add_library(mach_core STATIC ${MACH_CORE_SOURCES})
 target_include_directories(mach_core PUBLIC ${CMAKE_SOURCE_DIR} ${miniaudio_SOURCE_DIR})
 target_compile_options(mach_core PRIVATE -O3 -march=native -Wall -Wextra)
+target_link_libraries(mach_core PUBLIC dl m pthread)
 
 file(GLOB_RECURSE MACH_TEST_SOURCES "tests/**/*.cpp")
 add_executable(mach_tests tests/main.cpp ${MACH_TEST_SOURCES})
@@ -50,6 +51,13 @@ add_executable(mach_bench bench/render_bench.cpp)
 target_link_libraries(mach_bench PRIVATE mach_core)
 target_compile_options(mach_bench PRIVATE -O3 -march=native)
 target_include_directories(mach_bench PRIVATE ${CMAKE_SOURCE_DIR})
+
+# Testing sine oscillator in engine
+add_executable(mach_example examples/sine.cpp)
+target_link_libraries(mach_example PRIVATE mach_core)
+target_compile_options(mach_example PRIVATE -O3 -march=native)
+target_include_directories(mach_example PRIVATE ${CMAKE_SOURCE_DIR})
+
 
 nanobind_add_module(_mach_ext STABLE_ABI python/mach/bindings.cpp)
 target_link_libraries(_mach_ext PRIVATE mach_core)

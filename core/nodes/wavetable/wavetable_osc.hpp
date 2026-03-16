@@ -17,12 +17,12 @@ using ShapedWavetable =
 
 class WavetableOscillator {
   public:
-    explicit WavetableOscillator(float sample_rate = mach::constants::DEFAULT_SAMPLE_RATE,
+    explicit WavetableOscillator(uint32_t sample_rate = mach::constants::DEFAULT_SAMPLE_RATE,
                                  Waveform waveform = Waveform::SINE) noexcept
         : sample_rate_ {sample_rate}, phase_increment_ {compute_phase_increment()},
           wavetable_ {make_wavetable(waveform)}, waveform_ {waveform} {}
 
-    void set_sample_rate(float sample_rate) noexcept {
+    void set_sample_rate(uint32_t sample_rate) noexcept {
         sample_rate_ = sample_rate;
         phase_increment_ = compute_phase_increment();
     }
@@ -50,7 +50,7 @@ class WavetableOscillator {
 
   private:
     [[nodiscard]] auto compute_phase_increment() const noexcept -> uint32_t {
-        return static_cast<uint32_t>(frequency_hz_ / sample_rate_
+        return static_cast<uint32_t>(frequency_hz_ / static_cast<float>(sample_rate_)
                                      * mach::constants::TWO_TO_POWER_OF_32);
     }
 
@@ -67,7 +67,7 @@ class WavetableOscillator {
         }
     }
 
-    float sample_rate_;
+    uint32_t sample_rate_;
     float frequency_hz_ {mach::constants::NOTE_A4};
     uint32_t phase_ {};
     uint32_t phase_increment_ {};

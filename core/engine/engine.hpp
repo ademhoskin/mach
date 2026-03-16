@@ -1,22 +1,41 @@
 #pragma once
 
+#include "core/nodes/wavetable/wavetable_osc.hpp"
+
 #include <cstdint>
 
-namespace mach {
+#include <miniaudio.h>
+
+namespace mach::engine {
 
 struct EngineInitParams {
-    float sample_rate;
+    uint32_t sample_rate;
     uint32_t block_size;
 };
 
-class Engine {
+class AudioEngine {
   public:
-    explicit Engine(const EngineInitParams& params)
-        : sample_rate_ {params.sample_rate}, block_size_ {params.block_size} {}
+    explicit AudioEngine(const EngineInitParams& params) noexcept;
+    ~AudioEngine() noexcept;
+
+    AudioEngine(const AudioEngine&) = delete;
+    auto operator=(const AudioEngine&) -> AudioEngine& = delete;
+
+    AudioEngine(AudioEngine&&) = delete;
+    auto operator=(AudioEngine&&) -> AudioEngine& = delete;
+
+    void play() noexcept;
+    void stop() noexcept;
 
   private:
-    float sample_rate_;
+    static void audio_callback(ma_device* device, void* output, const void* input,
+                               ma_uint32 frame_count);
+
+    uint32_t sample_rate_;
     uint32_t block_size_;
+    // TODO: replace with node pool when implemented, using sine wavetable to test audio callback
+    nodes::wavetable::WavetableOscillator wt_oscillator_;
+    ma_device device_ {};
 };
 
-} // namespace mach
+} // namespace mach::engine
