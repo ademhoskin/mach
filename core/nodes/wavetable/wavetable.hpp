@@ -99,8 +99,8 @@ class Wavetable {
     static constexpr std::size_t IDX_MASK {TABLE_SIZE - 1UZ};
 };
 
-using Sine = Wavetable<SineShape>;
-using Sawtooth = Wavetable<SawtoothShape>;
-using Triangle = Wavetable<TriangleShape>;
-using Square = Wavetable<SquareShape>;
+using SineWavetable = Wavetable<SineShape>;
+using SawtoothWavetable = Wavetable<SawtoothShape>;
+using TriangleWavetable = Wavetable<TriangleShape>;
+using SquareWavetable = Wavetable<SquareShape>;
 } // namespace mach::nodes::wavetable

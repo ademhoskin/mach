@@ -12,7 +12,8 @@ namespace mach::nodes::wavetable {
 
 enum class Waveform : uint8_t { SINE, SAWTOOTH, TRIANGLE, SQUARE };
 
-using AnyWavetable = std::variant<Sine, Sawtooth, Triangle, Square>;
+using ShapedWavetable =
+    std::variant<SineWavetable, SawtoothWavetable, TriangleWavetable, SquareWavetable>;
 
 class WavetableOscillator {
   public:
@@ -53,16 +54,16 @@ class WavetableOscillator {
                                      * mach::constants::TWO_TO_POWER_OF_32);
     }
 
-    [[nodiscard]] static auto make_wavetable(Waveform waveform) noexcept -> AnyWavetable {
+    [[nodiscard]] static auto make_wavetable(Waveform waveform) noexcept -> ShapedWavetable {
         switch (waveform) {
             case Waveform::SINE:
-                return Sine {};
+                return SineWavetable {};
             case Waveform::SAWTOOTH:
-                return Sawtooth {};
+                return SawtoothWavetable {};
             case Waveform::TRIANGLE:
-                return Triangle {};
+                return TriangleWavetable {};
             case Waveform::SQUARE:
-                return Square {};
+                return SquareWavetable {};
         }
     }
 
@@ -70,10 +71,10 @@ class WavetableOscillator {
     float frequency_hz_ {mach::constants::NOTE_A4};
     uint32_t phase_ {};
     uint32_t phase_increment_ {};
-    AnyWavetable wavetable_;
+    ShapedWavetable wavetable_;
     Waveform waveform_ {};
 };
 
-static_assert(GeneratorNode<WavetableOscillator>);
+static_assert(TunableGeneratorNode<WavetableOscillator>);
 
 } // namespace mach::nodes::wavetable

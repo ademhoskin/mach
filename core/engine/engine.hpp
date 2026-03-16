@@ -5,17 +5,17 @@
 namespace mach {
 
 struct EngineInitParams {
-    float    sample_rate;
+    float sample_rate;
     uint32_t block_size;
 };
 
 class Engine {
   public:
     explicit Engine(const EngineInitParams& params)
-        : sample_rate_{params.sample_rate}, block_size_{params.block_size} {}
+        : sample_rate_ {params.sample_rate}, block_size_ {params.block_size} {}
 
   private:
-    float    sample_rate_;
+    float sample_rate_;
     uint32_t block_size_;
 };
 

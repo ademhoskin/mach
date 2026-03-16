@@ -8,16 +8,6 @@ using namespace mach::nodes::wavetable;
 constexpr auto VALID_BLOCK_SIZE {128UZ};
 
 struct TestWavetableOscFixture {
-    /*
-     * Default ctor:
-     *   sample_rate = mach::constants::DEFAULT_SAMPLE_RATE
-     *   waveform = Waveform::SINE
-     *   frequency = mach::constants::NOTE_A4
-     *   phase = 0
-     *   phase_increment = compute_phase_increment() result
-     *   get_interpolated_sample_ptr = Sine::get_interpolated_sample, via
-     *                                 bind_interpolated_sample_ptr()
-     */
     WavetableOscillator oscillator;
 };
 
@@ -37,7 +27,6 @@ TEST_CASE_FIXTURE(TestWavetableOscFixture, "WavetableOscillator") {
         CHECK(buffer_one != buffer_two);
     }
 
-    // We check that our func ptr changes by verifying side effect
     SUBCASE("changes output when waveform changes") {
         std::array<float, VALID_BLOCK_SIZE> sine_buffer {};
         std::array<float, VALID_BLOCK_SIZE> sawtooth_buffer {};

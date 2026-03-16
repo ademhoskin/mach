@@ -17,86 +17,88 @@ using namespace mach::nodes::wavetable;
 
 TEST_CASE("Sine Wavetable") {
     SUBCASE("returns 0 at phase 0") {
-        CHECK(Sine::get_interpolated_sample(0UZ) == doctest::Approx(0.0F).epsilon(AUDIO_EPSILON));
+        CHECK(SineWavetable::get_interpolated_sample(0UZ)
+              == doctest::Approx(0.0F).epsilon(AUDIO_EPSILON));
     }
 
     SUBCASE("returns 1 at 1/4 phase") {
-        CHECK(Sine::get_interpolated_sample(QUARTER_CYCLE)
+        CHECK(SineWavetable::get_interpolated_sample(QUARTER_CYCLE)
               == doctest::Approx(1.0F).epsilon(AUDIO_EPSILON));
     }
 
     SUBCASE("returns 0 at 1/2 phase") {
-        CHECK(Sine::get_interpolated_sample(HALF_CYCLE)
+        CHECK(SineWavetable::get_interpolated_sample(HALF_CYCLE)
               == doctest::Approx(0.0F).epsilon(AUDIO_EPSILON));
     }
 
     SUBCASE("returns -1 at 3/4 phase") {
-        CHECK(Sine::get_interpolated_sample(THREE_QUARTERS_CYCLE)
+        CHECK(SineWavetable::get_interpolated_sample(THREE_QUARTERS_CYCLE)
               == doctest::Approx(-1.0F).epsilon(AUDIO_EPSILON));
     }
 }
 
 TEST_CASE("Triangle Wavetable") {
     SUBCASE("returns -1 at phase 0") {
-        CHECK(Triangle::get_interpolated_sample(0UZ)
+        CHECK(TriangleWavetable::get_interpolated_sample(0UZ)
               == doctest::Approx(-1.0F).epsilon(AUDIO_EPSILON));
     }
 
     SUBCASE("returns 0 at 1/4 phase") {
-        CHECK(Triangle::get_interpolated_sample(QUARTER_CYCLE)
+        CHECK(TriangleWavetable::get_interpolated_sample(QUARTER_CYCLE)
               == doctest::Approx(0.0F).epsilon(AUDIO_EPSILON));
     }
 
     SUBCASE("returns 1 at 1/2 phase") {
-        CHECK(Triangle::get_interpolated_sample(HALF_CYCLE)
+        CHECK(TriangleWavetable::get_interpolated_sample(HALF_CYCLE)
               == doctest::Approx(1.0F).epsilon(AUDIO_EPSILON));
     }
 
     SUBCASE("returns 0 at 3/4 phase") {
-        CHECK(Triangle::get_interpolated_sample(THREE_QUARTERS_CYCLE)
+        CHECK(TriangleWavetable::get_interpolated_sample(THREE_QUARTERS_CYCLE)
               == doctest::Approx(0.0F).epsilon(AUDIO_EPSILON));
     }
 }
 
 TEST_CASE("Sawtooth Wavetable") {
     SUBCASE("returns 0 at phase 0") {
-        CHECK(Sawtooth::get_interpolated_sample(0UZ)
+        CHECK(SawtoothWavetable::get_interpolated_sample(0UZ)
               == doctest::Approx(0.0F).epsilon(AUDIO_EPSILON));
     }
 
     SUBCASE("returns 0.5 at 1/4 phase") {
-        CHECK(Sawtooth::get_interpolated_sample(QUARTER_CYCLE)
+        CHECK(SawtoothWavetable::get_interpolated_sample(QUARTER_CYCLE)
               == doctest::Approx(HALF_AMPLITUDE).epsilon(AUDIO_EPSILON));
     }
 
     SUBCASE("returns 1 at 1/2 cycle") {
-        CHECK(Sawtooth::get_interpolated_sample(HALF_CYCLE)
+        CHECK(SawtoothWavetable::get_interpolated_sample(HALF_CYCLE)
               == doctest::Approx(1.0F).epsilon(AUDIO_EPSILON));
     }
 
     SUBCASE("returns -0.5 at 3/4 phase") {
-        CHECK(Sawtooth::get_interpolated_sample(THREE_QUARTERS_CYCLE)
+        CHECK(SawtoothWavetable::get_interpolated_sample(THREE_QUARTERS_CYCLE)
               == doctest::Approx(-HALF_AMPLITUDE).epsilon(AUDIO_EPSILON));
     }
 }
 
 TEST_CASE("Square Wavetable") {
     SUBCASE("returns 1 at phase 0") {
-        CHECK(Square::get_interpolated_sample(0UZ) == doctest::Approx(1.0F).epsilon(AUDIO_EPSILON));
+        CHECK(SquareWavetable::get_interpolated_sample(0UZ)
+              == doctest::Approx(1.0F).epsilon(AUDIO_EPSILON));
     }
 
     SUBCASE("returns 1 at 1/4 phase") {
-        CHECK(Square::get_interpolated_sample(QUARTER_CYCLE)
+        CHECK(SquareWavetable::get_interpolated_sample(QUARTER_CYCLE)
               == doctest::Approx(1.0F).epsilon(AUDIO_EPSILON));
     }
 
     SUBCASE("returns 1 at 1/2 phase") {
-        CHECK(Square::get_interpolated_sample(HALF_CYCLE)
+        CHECK(SquareWavetable::get_interpolated_sample(HALF_CYCLE)
               == doctest::Approx(1.0F).epsilon(AUDIO_EPSILON));
     }
 
     SUBCASE("returns -1 at 3/4 phase") {
-        CHECK(Square::get_interpolated_sample(THREE_QUARTERS_CYCLE)
+        CHECK(SquareWavetable::get_interpolated_sample(THREE_QUARTERS_CYCLE)
               == doctest::Approx(-1.0F).epsilon(AUDIO_EPSILON));
     }
 }
