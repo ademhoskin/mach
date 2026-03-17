@@ -34,7 +34,7 @@ class NodePool {
   public:
     explicit NodePool(uint32_t capacity)
         // NOLINTNEXTLINE  NOTE: see private defintion
-        : CAPACITY {capacity}, slots_ {std::make_unique<NodeSlot[]>(capacity)} {};
+        : slots_ {std::make_unique<NodeSlot[]>(capacity)}, CAPACITY {capacity} {};
 
     template<typename Node, typename... Args>
         requires(nodes::DSPNode<Node> && std::constructible_from<Node, Args...>)
@@ -55,10 +55,20 @@ class NodePool {
     }
 
     using NodeHandleID = uint64_t;
-    auto activate(NodeHandleID handle) noexcept -> bool;
-    auto deactivate(NodeHandleID handle) noexcept -> bool;
-    auto get_node(NodeHandleID handle) noexcept -> std::optional<nodes::AnyDSPNode*>;
+    [[nodiscard]] auto activate(NodeHandleID handle) noexcept -> bool;
+    [[nodiscard]] auto deactivate(NodeHandleID handle) noexcept -> bool;
+    [[nodiscard]] auto get_node(NodeHandleID handle) noexcept -> std::optional<nodes::AnyDSPNode*>;
     void recycle(NodeHandleID handle) noexcept;
+
+    template<typename F>
+    void for_each_active_node(F&& func) noexcept {
+        auto slots {std::span {slots_.get(), CAPACITY}};
+        for (auto&& [idx, slot] : std::views::enumerate(slots)) {
+            if (slot.current_state.load(std::memory_order_acquire) == NodeSlotState::ACTIVE) {
+                std::visit(std::forward<F>(func), slot.node.value());
+            }
+        }
+    }
 
   private:
     static auto pack_node_to_handle(NodeAddress addr) noexcept -> NodeHandleID {
@@ -69,12 +79,12 @@ class NodePool {
         return std::bit_cast<NodeAddress>(handle);
     };
 
-    const uint32_t CAPACITY; // NOLINT this never changes
     /*
-     * NOTE: we use std::unique_ptr here to avoid memory leaks.
-     * so we are good to use C-style arrays.
+     * NOTE: we use std::unique_ptr here to avoid memory leaks,
+     * so we are good to use a C-style array
      */
     std::unique_ptr<NodeSlot[]> slots_; // NOLINT
+    const uint32_t CAPACITY;            // NOLINT this is an actual constraint
 };
 
 } // namespace mach::memory::node_pool

@@ -31,7 +31,8 @@ auto NodePool::get_node(NodeHandleID handle) noexcept -> std::optional<nodes::An
         return std::nullopt;
     }
 
-    if (slots_[idx].current_state != NodeSlotState::ACTIVE) {
+    if (slots_[idx].current_state != NodeSlotState::ACTIVE
+        && slots_[idx].current_state != NodeSlotState::ACQUIRED) {
         return std::nullopt;
     }
 

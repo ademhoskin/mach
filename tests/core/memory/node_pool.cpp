@@ -3,6 +3,7 @@
 #include "core/nodes/wavetable/wavetable_osc.hpp"
 
 #include <cstdint>
+#include <variant>
 
 #include <doctest/doctest.h>
 
@@ -36,8 +37,8 @@ TEST_CASE_FIXTURE(TestNodePoolFixture, "NodePool") {
 
     SUBCASE("successfully detects stale generation during activation") {
         auto handle {pool.acquire<WavetableOscillator>(wavetable_osc).value()};
-        pool.activate(handle);
-        pool.deactivate(handle);
+        std::ignore = pool.activate(handle);
+        std::ignore = pool.deactivate(handle);
         pool.recycle(handle);
         CHECK_FALSE(pool.activate(handle));
     }
@@ -46,15 +47,15 @@ TEST_CASE_FIXTURE(TestNodePoolFixture, "NodePool") {
         auto handle {pool.acquire<WavetableOscillator>(wavetable_osc).value()};
         CHECK_FALSE(pool.deactivate(handle)); // we just acquired
 
-        pool.activate(handle);
+        std::ignore = pool.activate(handle);
         CHECK(pool.deactivate(handle));
         CHECK_FALSE(pool.deactivate(handle)); // we already deactivated
     }
 
     SUBCASE("bumps generation and clears slot on successfulrecycles") {
         auto handle {pool.acquire<WavetableOscillator>(wavetable_osc).value()};
-        pool.activate(handle);
-        pool.deactivate(handle);
+        std::ignore = pool.activate(handle);
+        std::ignore = pool.deactivate(handle);
         pool.recycle(handle);
 
         CHECK_FALSE(
@@ -65,7 +66,7 @@ TEST_CASE_FIXTURE(TestNodePoolFixture, "NodePool") {
 
     SUBCASE("returns valid node on successful get") {
         auto handle {pool.acquire<WavetableOscillator>(wavetable_osc).value()};
-        pool.activate(handle);
+        std::ignore = pool.activate(handle);
         CHECK(pool.get_node(handle).has_value());
     }
 
@@ -75,11 +76,22 @@ TEST_CASE_FIXTURE(TestNodePoolFixture, "NodePool") {
         }
         SUBCASE("after recycling a node") {
             auto handle {pool.acquire<WavetableOscillator>(wavetable_osc).value()};
-            pool.activate(handle);
-            pool.deactivate(handle);
+            std::ignore = pool.activate(handle);
+            std::ignore = pool.deactivate(handle);
             pool.recycle(handle);
             CHECK_FALSE(pool.get_node(handle).has_value());
         }
+    }
+
+    SUBCASE("successfully calls set_param on active node") {
+        auto handle {pool.acquire<WavetableOscillator>(wavetable_osc).value()};
+        std::ignore = pool.activate(handle);
+        auto maybe_node {pool.get_node(handle)};
+        REQUIRE(maybe_node.has_value());
+        constexpr float TEST_FREQUENCY {880.0F};
+        std::visit([](auto& node) -> void { node.set_param({.param_id = 0U, .value = TEST_FREQUENCY}); },
+                   *maybe_node.value());
+        CHECK(pool.deactivate(handle));
     }
 
     SUBCASE("has successful happy path on acquire, activate, deactivate, recycle") {

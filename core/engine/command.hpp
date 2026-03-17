@@ -1,14 +1,15 @@
 #pragma once
 
+#include "core/nodes/node.hpp"
+
 #include <cstdint>
 #include <variant>
 
 namespace mach::engine {
-using NodeId = uint64_t;
 
+using NodeId = uint64_t;
 struct AddNodePayload {
     NodeId node_id;
-    uint32_t node_type;
 };
 
 struct RemoveNodePayload {
@@ -17,8 +18,7 @@ struct RemoveNodePayload {
 
 struct SetNodeParamPayload {
     NodeId node_id;
-    uint32_t param_id;
-    float value;
+    nodes::NodeParamUpdate update;
 };
 
 using CommandPayload = std::variant<AddNodePayload, RemoveNodePayload, SetNodeParamPayload>;
