@@ -234,7 +234,7 @@ The cardinal rule: **the audio thread never allocates.** All memory regions are 
 
 ```mermaid
 graph LR
-    DSP[DSP Graph\nAudio Thread]
+    DSP[DSP Graph<br/>Audio Thread]
     JAN[Janitor Thread]
     DIO[Disk I/O Thread]
     TEL[Telemetry Thread]
@@ -278,12 +278,12 @@ The most complex lifecycle in the system. A slot is never freed to the OS — it
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Free : engine init\n(all slots start free)
-    Free --> Acquired : add_node() —\nPython thread claims slot\nfrom pool (O1)
-    Acquired --> Active : command pushed via SPSC\naudio thread initializes node\ninto slot
-    Active --> Dead : remove_node() command\naudio thread stops evaluating node\nhands raw pointer to Janitor queue
-    Dead --> Free : Janitor thread runs destructor\nreturns slot to pool
-    Free --> [*] : engine shutdown\npool slab freed
+    [*] --> Free : engine init<br/>(all slots start free)
+    Free --> Acquired : add_node() —<br/>Python thread claims slot<br/>from pool (O1)
+    Acquired --> Active : command pushed via SPSC<br/>audio thread initializes node<br/>into slot
+    Active --> Dead : remove_node() command<br/>audio thread stops evaluating node<br/>hands raw pointer to Janitor queue
+    Dead --> Free : Janitor thread runs destructor<br/>returns slot to pool
+    Free --> [*] : engine shutdown<br/>pool slab freed
 ```
 
 Key invariants: the audio thread never calls `new` or `delete`. It only reads the slot pointer from the pool and writes a raw pointer to the Janitor queue. The Janitor is the only thread that runs destructors. A slot in the `Dead` state is invisible to the DSP graph — the audio thread will not touch it again after the handoff.
@@ -297,11 +297,11 @@ Assets are large variable-size blobs (PCM, wavetables, IR files). They live outs
 ```mermaid
 stateDiagram-v2
     [*] --> Unloaded
-    Unloaded --> Loading : load_asset() —\nDisk I/O thread begins async read
-    Loading --> Ready : Disk I/O thread finishes decode\nwrites PCM into asset slab\nsignals engine
-    Ready --> Referenced : DSP graph node holds\na read-only pointer to buffer
-    Referenced --> Ready : node removed —\nbuffer still resident in slab
-    Ready --> Unloaded : unload_asset() —\nslab slot marked free
+    Unloaded --> Loading : load_asset() —<br/>Disk I/O thread begins async read
+    Loading --> Ready : Disk I/O thread finishes decode<br/>writes PCM into asset slab<br/>signals engine
+    Ready --> Referenced : DSP graph node holds<br/>a read-only pointer to buffer
+    Referenced --> Ready : node removed —<br/>buffer still resident in slab
+    Ready --> Unloaded : unload_asset() —<br/>slab slot marked free
     Unloaded --> [*] : engine shutdown
 ```
 
@@ -315,9 +315,9 @@ Simplest lifecycle in the system. No individual allocations are ever freed.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Empty : engine init\nfixed slab allocated
-    Empty --> InUse : audio callback begins\nnodes bump-allocate\ntemporary buffers
-    InUse --> Empty : audio callback ends\narena pointer reset to base
+    [*] --> Empty : engine init<br/>fixed slab allocated
+    Empty --> InUse : audio callback begins<br/>nodes bump-allocate<br/>temporary buffers
+    InUse --> Empty : audio callback ends<br/>arena pointer reset to base
 ```
 
 Key invariant: the scratch arena pointer is only ever moved forward during a block and reset at the end. No individual buffer is ever freed. Worst-case scratch usage must be known at engine init — it is `max_nodes * max_channels * block_size * sizeof(float)`.

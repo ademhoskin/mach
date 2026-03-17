@@ -11,6 +11,7 @@ namespace mach::engine {
 struct EngineInitParams {
     uint32_t sample_rate;
     uint32_t block_size;
+    uint32_t max_node_pool_size;
 };
 
 class AudioEngine {
