@@ -58,9 +58,18 @@ class WavetableOscillator {
         }
     }
 
+    static constexpr uint32_t FREQ_PARAM_ID {0U};
+    static constexpr uint32_t AMP_PARAM_ID {1U};
+
   private:
-    // NOLINTNEXTLINE standard in audio for params is 32 bits
-    enum class ParamId : uint32_t { FREQUENCY = 0, AMPLITUDE = 1, WAVEFORM = 2 };
+    static constexpr uint32_t WAVE_PARAM_ID {2U}; // not required to expose
+
+    // NOLINTNEXTLINE uint32_t is convention for audio
+    enum class ParamId : uint32_t {
+        FREQUENCY = FREQ_PARAM_ID,
+        AMPLITUDE = AMP_PARAM_ID,
+        WAVEFORM = WAVE_PARAM_ID
+    };
 
     using ShapedWavetable = std::variant<SineWavetable, SawtoothWavetable,
                                          TriangleWavetable, SquareWavetable>;

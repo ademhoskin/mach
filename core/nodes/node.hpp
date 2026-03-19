@@ -20,6 +20,8 @@ concept DSPNode = requires(Node node, float sample_rate, NodeParamUpdate update)
 template<typename Node>
 concept GeneratorNode = DSPNode<Node> && requires(Node node, std::span<float> output) {
     { node.render_frame(output) } noexcept -> std::same_as<void>;
+    Node::FREQ_PARAM_ID;
+    Node::AMP_PARAM_ID;
 };
 
 } // namespace mach::nodes
