@@ -55,13 +55,6 @@ target_link_libraries(mach_bench PRIVATE mach_core)
 target_compile_options(mach_bench PRIVATE -O3 -march=native)
 target_include_directories(mach_bench PRIVATE ${CMAKE_SOURCE_DIR})
 
-# Testing sine oscillator in engine
-add_executable(mach_example examples/sine.cpp)
-target_link_libraries(mach_example PRIVATE mach_core)
-target_compile_options(mach_example PRIVATE -O3 -march=native)
-target_include_directories(mach_example PRIVATE ${CMAKE_SOURCE_DIR})
-
-
 nanobind_add_module(_mach_ext STABLE_ABI python/mach/bindings.cpp)
 target_link_libraries(_mach_ext PRIVATE mach_core)
 target_compile_options(_mach_ext PRIVATE -O3 -march=native -Wall -Wextra)
