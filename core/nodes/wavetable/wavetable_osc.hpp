@@ -19,8 +19,9 @@ using ShapedWavetable =
 
 class WavetableOscillator {
   public:
-    explicit WavetableOscillator(uint32_t sample_rate = mach::constants::DEFAULT_SAMPLE_RATE,
-                                 Waveform waveform = Waveform::SINE) noexcept
+    explicit WavetableOscillator(
+        uint32_t sample_rate = mach::constants::DEFAULT_SAMPLE_RATE,
+        Waveform waveform = Waveform::SINE) noexcept
         : sample_rate_ {sample_rate}, phase_increment_ {compute_phase_increment()},
           wavetable_ {make_wavetable(waveform)}, waveform_ {waveform} {}
 
@@ -33,7 +34,8 @@ class WavetableOscillator {
         std::visit(
             [&](const auto& table) -> void {
                 for (auto& sample : output) {
-                    sample = std::decay_t<decltype(table)>::get_interpolated_sample(phase_);
+                    sample =
+                        std::decay_t<decltype(table)>::get_interpolated_sample(phase_);
                     phase_ += phase_increment_;
                 }
             },
@@ -63,7 +65,8 @@ class WavetableOscillator {
                                      * mach::constants::TWO_TO_POWER_OF_32);
     }
 
-    [[nodiscard]] static auto make_wavetable(Waveform waveform) noexcept -> ShapedWavetable {
+    [[nodiscard]] static auto make_wavetable(Waveform waveform) noexcept
+        -> ShapedWavetable {
         switch (waveform) {
             case Waveform::SINE:
                 return SineWavetable {};

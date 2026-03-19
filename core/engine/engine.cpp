@@ -28,7 +28,8 @@ AudioEngine::AudioEngine(const EngineInitParams& params) noexcept
 
     ma_result result = ma_device_init(nullptr, &config, &device_);
     if (result != MA_SUCCESS) {
-        std::println(std::cerr, "Failed to initialize audio device!: {}", std::to_string(result));
+        std::println(std::cerr, "Failed to initialize audio device!: {}",
+                     std::to_string(result));
         std::terminate();
     }
 }
@@ -47,7 +48,8 @@ auto AudioEngine::remove_node(AudioEngine::NodeHandleID handle) noexcept
 }
 
 auto AudioEngine::set_node_parameter(AudioEngine::NodeHandleID handle, uint32_t param_id,
-                                     float value) noexcept -> std::expected<void, EngineError> {
+                                     float value) noexcept
+    -> std::expected<void, EngineError> {
     if (!command_queue_.try_push(SetNodeParamPayload {
             .node_id = handle, .update = {.param_id = param_id, .value = value}})) {
         return std::unexpected<EngineError>(EngineError::COMMAND_QUEUE_FULL);
@@ -59,7 +61,8 @@ auto AudioEngine::set_node_parameter(AudioEngine::NodeHandleID handle, uint32_t 
 void AudioEngine::play() noexcept {
     ma_result result = ma_device_start(&device_);
     if (result != MA_SUCCESS) {
-        std::println(std::cerr, "Failed to start audio device!: {}", std::to_string(result));
+        std::println(std::cerr, "Failed to start audio device!: {}",
+                     std::to_string(result));
         std::terminate();
     }
 }
@@ -67,7 +70,8 @@ void AudioEngine::play() noexcept {
 void AudioEngine::stop() noexcept {
     ma_result result = ma_device_stop(&device_);
     if (result != MA_SUCCESS) {
-        std::println(std::cerr, "Failed to stop audio device!: {}", std::to_string(result));
+        std::println(std::cerr, "Failed to stop audio device!: {}",
+                     std::to_string(result));
         std::terminate();
     }
 }
@@ -76,7 +80,8 @@ void AudioEngine::stop() noexcept {
 void AudioEngine::audio_callback(ma_device* device, void* output, const void* input,
                                  ma_uint32 frame_count) {
     auto* engine {static_cast<AudioEngine*>(device->pUserData)};
-    auto output_buffer {std::span<float> {static_cast<float*>(output), frame_count * 2UZ}};
+    auto output_buffer {
+        std::span<float> {static_cast<float*>(output), frame_count * 2UZ}};
 
     CommandPayload cmd;
     while (engine->command_queue_.try_pop(cmd)) {
@@ -87,7 +92,8 @@ void AudioEngine::audio_callback(ma_device* device, void* output, const void* in
                                    engine->node_pool_.deactivate(payload.node_id);
                                },
                                [&](const SetNodeParamPayload& payload) -> void {
-                                   auto result {engine->node_pool_.get_node(payload.node_id)};
+                                   auto result {
+                                       engine->node_pool_.get_node(payload.node_id)};
                                    if (!result) {
                                        return;
                                    }

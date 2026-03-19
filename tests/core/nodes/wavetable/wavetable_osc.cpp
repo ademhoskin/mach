@@ -31,7 +31,8 @@ TEST_CASE_FIXTURE(TestWavetableOscFixture, "WavetableOscillator") {
         std::array<float, VALID_BLOCK_SIZE> sine_buffer {};
         std::array<float, VALID_BLOCK_SIZE> sawtooth_buffer {};
         oscillator.render_frame(sine_buffer);
-        oscillator.set_param({.param_id = 1U, .value = static_cast<float>(Waveform::SAWTOOTH)});
+        oscillator.set_param(
+            {.param_id = 1U, .value = static_cast<float>(Waveform::SAWTOOTH)});
         oscillator.render_frame(sawtooth_buffer);
         CHECK(sine_buffer != sawtooth_buffer);
     }

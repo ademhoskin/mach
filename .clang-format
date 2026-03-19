@@ -13,7 +13,7 @@ IndentPPDirectives: BeforeHash
 NamespaceIndentation: None
 
 # Column limit
-ColumnLimit: 100
+ColumnLimit: 90
 
 # Braces — K&R (opening brace same line always)
 BreakBeforeBraces: Attach

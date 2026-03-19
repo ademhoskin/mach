@@ -58,8 +58,8 @@ TEST_CASE_FIXTURE(TestNodePoolFixture, "NodePool") {
         std::ignore = pool.deactivate(handle);
         pool.recycle(handle);
 
-        CHECK_FALSE(
-            pool.activate(handle)); // we should not be able to activate, generation has bumped
+        CHECK_FALSE(pool.activate(
+            handle)); // we should not be able to activate, generation has bumped
         auto new_handle {pool.acquire<WavetableOscillator>(wavetable_osc).value()};
         CHECK_FALSE(new_handle == handle); // same handle means we have not bumped
     }
@@ -89,8 +89,11 @@ TEST_CASE_FIXTURE(TestNodePoolFixture, "NodePool") {
         auto maybe_node {pool.get_node(handle)};
         REQUIRE(maybe_node.has_value());
         constexpr float TEST_FREQUENCY {880.0F};
-        std::visit([](auto& node) -> void { node.set_param({.param_id = 0U, .value = TEST_FREQUENCY}); },
-                   *maybe_node.value());
+        std::visit(
+            [](auto& node) -> void {
+                node.set_param({.param_id = 0U, .value = TEST_FREQUENCY});
+            },
+            *maybe_node.value());
         CHECK(pool.deactivate(handle));
     }
 

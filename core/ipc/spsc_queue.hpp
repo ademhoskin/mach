@@ -54,7 +54,8 @@ class SPSCQueue {
 
     alignas(mach::constants::ALIGNAS_SIZE) std::atomic_size_t reader_idx_ {0UZ};
     alignas(mach::constants::ALIGNAS_SIZE) std::atomic_size_t writer_idx_ {0UZ};
-    alignas(mach::constants::ALIGNAS_SIZE) std::array<QueueElement, QueueSize> ring_buffer_ {};
+    alignas(mach::constants::ALIGNAS_SIZE)
+        std::array<QueueElement, QueueSize> ring_buffer_ {};
 };
 
 } // namespace mach::ipc

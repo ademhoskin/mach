@@ -46,8 +46,8 @@ class NodePool {
             if (slot.current_state.compare_exchange_strong(expected_state,
                                                            NodeSlotState::ACQUIRED)) {
                 slot.node.emplace(Node {std::forward<Args>(args)...});
-                return pack_node_to_handle(
-                    {.slot_idx = static_cast<uint32_t>(idx), .generation = slot.generation});
+                return pack_node_to_handle({.slot_idx = static_cast<uint32_t>(idx),
+                                            .generation = slot.generation});
             }
         }
 
@@ -57,14 +57,16 @@ class NodePool {
     using NodeHandleID = uint64_t;
     [[nodiscard]] auto activate(NodeHandleID handle) noexcept -> bool;
     [[nodiscard]] auto deactivate(NodeHandleID handle) noexcept -> bool;
-    [[nodiscard]] auto get_node(NodeHandleID handle) noexcept -> std::optional<nodes::AnyDSPNode*>;
+    [[nodiscard]] auto get_node(NodeHandleID handle) noexcept
+        -> std::optional<nodes::AnyDSPNode*>;
     void recycle(NodeHandleID handle) noexcept;
 
     template<typename F>
     void for_each_active_node(F&& func) noexcept {
         auto slots {std::span {slots_.get(), CAPACITY}};
         for (auto&& [idx, slot] : std::views::enumerate(slots)) {
-            if (slot.current_state.load(std::memory_order_acquire) == NodeSlotState::ACTIVE) {
+            if (slot.current_state.load(std::memory_order_acquire)
+                == NodeSlotState::ACTIVE) {
                 std::visit(std::forward<F>(func), slot.node.value());
             }
         }

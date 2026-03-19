@@ -28,9 +28,9 @@ struct SineShape {
         const auto NINE_FACTORIAL {362880.0F};
         const auto ELEVEN_FACTORIAL {39916800.0F};
 
-        return SAMPLE_INPUT - (INPUT_CUBED / THREE_FACTORIAL) + (INPUT_QUINTIC / FIVE_FACTORIAL)
-               - (INPUT_SEPTIC / SEVEN_FACTORIAL) + (INPUT_NONIC / NINE_FACTORIAL)
-               - (INPUT_UNDECIC / ELEVEN_FACTORIAL);
+        return SAMPLE_INPUT - (INPUT_CUBED / THREE_FACTORIAL)
+               + (INPUT_QUINTIC / FIVE_FACTORIAL) - (INPUT_SEPTIC / SEVEN_FACTORIAL)
+               + (INPUT_NONIC / NINE_FACTORIAL) - (INPUT_UNDECIC / ELEVEN_FACTORIAL);
     }
 };
 
@@ -55,7 +55,8 @@ struct SquareShape {
 
 // center to [-pi, pi]
 constexpr auto compute_centered_phase_angle(const std::size_t IDX) noexcept -> float {
-    const auto CALCULATED_ANGLE {mach::constants::TWO_TIMES_PI_FLOAT * static_cast<float>(IDX)
+    const auto CALCULATED_ANGLE {mach::constants::TWO_TIMES_PI_FLOAT
+                                 * static_cast<float>(IDX)
                                  / static_cast<float>(DEFAULT_TABLE_SIZE)};
 
     return (CALCULATED_ANGLE > std::numbers::pi_v<float>)
@@ -68,12 +69,15 @@ class Wavetable {
   public:
     // Uses linear interpolation
     // TODO: Read how to use 4 point cubic interpolation
-    [[nodiscard]] static auto get_interpolated_sample(const uint32_t PHASE) noexcept -> float {
+    [[nodiscard]] static auto get_interpolated_sample(const uint32_t PHASE) noexcept
+        -> float {
         static constexpr auto INDEX_BITS {std::bit_width(TABLE_SIZE) - 1};
         static constexpr auto FRACTION_BITS {32U - INDEX_BITS};
-        static constexpr float FRACTION_SCALE {1.0F / static_cast<float>(1U << FRACTION_BITS)};
+        static constexpr float FRACTION_SCALE {1.0F
+                                               / static_cast<float>(1U << FRACTION_BITS)};
 
-        const auto KNOWN_POINT_ONE {static_cast<std::size_t>(PHASE >> FRACTION_BITS) & IDX_MASK};
+        const auto KNOWN_POINT_ONE {static_cast<std::size_t>(PHASE >> FRACTION_BITS)
+                                    & IDX_MASK};
         const auto KNOWN_POINT_TWO {(KNOWN_POINT_ONE + 1UZ) & IDX_MASK};
         const auto FLOAT_KNOWN_POINT_ONE_DIFF {
             static_cast<float>(PHASE & ((1U << FRACTION_BITS) - 1U)) * FRACTION_SCALE};

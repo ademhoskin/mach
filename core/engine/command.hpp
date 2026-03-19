@@ -21,6 +21,7 @@ struct SetNodeParamPayload {
     nodes::NodeParamUpdate update;
 };
 
-using CommandPayload = std::variant<AddNodePayload, RemoveNodePayload, SetNodeParamPayload>;
+using CommandPayload =
+    std::variant<AddNodePayload, RemoveNodePayload, SetNodeParamPayload>;
 
 } // namespace mach::engine

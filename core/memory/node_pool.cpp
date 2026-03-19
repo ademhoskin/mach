@@ -11,7 +11,8 @@ auto NodePool::activate(NodeHandleID handle) noexcept -> bool {
     }
 
     auto expected_state {NodeSlotState::ACQUIRED};
-    return slots_[idx].current_state.compare_exchange_strong(expected_state, NodeSlotState::ACTIVE);
+    return slots_[idx].current_state.compare_exchange_strong(expected_state,
+                                                             NodeSlotState::ACTIVE);
 }
 
 auto NodePool::deactivate(NodeHandleID handle) noexcept -> bool {
@@ -25,7 +26,8 @@ auto NodePool::deactivate(NodeHandleID handle) noexcept -> bool {
                                                              NodeSlotState::INACTIVE);
 }
 
-auto NodePool::get_node(NodeHandleID handle) noexcept -> std::optional<nodes::AnyDSPNode*> {
+auto NodePool::get_node(NodeHandleID handle) noexcept
+    -> std::optional<nodes::AnyDSPNode*> {
     auto [idx, generation] {unpack_node_from_handle(handle)};
     if (generation != slots_[idx].generation) {
         return std::nullopt;
