@@ -34,7 +34,8 @@ AudioEngine::~AudioEngine() noexcept {
 
 auto AudioEngine::remove_node(AudioEngine::NodeHandleID handle) noexcept
     -> std::expected<void, EngineError> {
-    if (!command_queue_.try_push(commands::detail::RemoveNodePayload {.node_id = handle})) {
+    if (!command_queue_.try_push(
+            commands::detail::RemoveNodePayload {.node_id = handle})) {
         // Propagate so controller knows to retry
         return std::unexpected<EngineError>(EngineError::COMMAND_QUEUE_FULL);
     }
@@ -68,6 +69,15 @@ void AudioEngine::stop() noexcept {
                      std::to_string(result));
         std::terminate();
     }
+
+    // drain remaining commands in command queue
+    commands::detail::CommandPayload cmd;
+    while (command_queue_.try_pop(cmd)) {
+        [[maybe_unused]] auto scheduled {event_scheduler_.schedule(cmd, current_sample_)};
+        assert(scheduled);
+    }
+
+    event_scheduler_.process_block(current_sample_, 0, node_pool_);
 }
 
 // NOLINTNEXTLINE we are matching miniaudio API
