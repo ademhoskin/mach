@@ -1,24 +1,18 @@
 #include "core/engine/engine.hpp"
 
-#include "core/engine/command.hpp"
+#include "core/engine/commands.hpp"
 
 #include <algorithm>
 #include <iostream>
 #include <print>
 #include <span>
 #include <string>
-#include <variant>
 
 namespace mach::engine {
-template<typename... Ts>
-struct Overloaded : Ts... {
-    using Ts::operator()...;
-};
-
 // NOTE: we fail fdst for now, will make more robust after getting callback to work
 AudioEngine::AudioEngine(const EngineInitParams& params) noexcept
     : node_pool_ {params.max_node_pool_size}, sample_rate_ {params.sample_rate},
-      block_size_ {params.block_size} {
+      block_size_ {params.block_size}, event_scheduler_ {COMMAND_QUEUE_SIZE} {
     ma_device_config config {ma_device_config_init(ma_device_type_playback)};
     config.playback.format = ma_format_f32;
     config.playback.channels = 2;
@@ -40,7 +34,7 @@ AudioEngine::~AudioEngine() noexcept {
 
 auto AudioEngine::remove_node(AudioEngine::NodeHandleID handle) noexcept
     -> std::expected<void, EngineError> {
-    if (!command_queue_.try_push(RemoveNodePayload {.node_id = handle})) {
+    if (!command_queue_.try_push(commands::RemoveNodePayload {.node_id = handle})) {
         // Propagate so controller knows to retry
         return std::unexpected<EngineError>(EngineError::COMMAND_QUEUE_FULL);
     }
@@ -50,7 +44,7 @@ auto AudioEngine::remove_node(AudioEngine::NodeHandleID handle) noexcept
 auto AudioEngine::set_node_parameter(AudioEngine::NodeHandleID handle, uint32_t param_id,
                                      float value) noexcept
     -> std::expected<void, EngineError> {
-    if (!command_queue_.try_push(SetNodeParamPayload {
+    if (!command_queue_.try_push(commands::SetNodeParamPayload {
             .node_id = handle, .update = {.param_id = param_id, .value = value}})) {
         return std::unexpected<EngineError>(EngineError::COMMAND_QUEUE_FULL);
     }
@@ -76,39 +70,31 @@ void AudioEngine::stop() noexcept {
     }
 }
 
-// NOLINTNEXTLINE
+// NOLINTNEXTLINE we are matching miniaudio API
 void AudioEngine::audio_callback(ma_device* device, void* output, const void* input,
                                  ma_uint32 frame_count) {
+    static_cast<void>(input);
+
     auto* engine {static_cast<AudioEngine*>(device->pUserData)};
     auto output_buffer {
         std::span<float> {static_cast<float*>(output), frame_count * 2UZ}};
 
-    CommandPayload cmd;
+    commands::CommandPayload cmd;
     while (engine->command_queue_.try_pop(cmd)) {
-        std::visit(Overloaded {[&](const AddNodePayload& payload) -> void {
-                                   engine->node_pool_.activate(payload.node_id);
-                               },
-                               [&](const RemoveNodePayload& payload) -> void {
-                                   engine->node_pool_.deactivate(payload.node_id);
-                               },
-                               [&](const SetNodeParamPayload& payload) -> void {
-                                   auto result {
-                                       engine->node_pool_.get_node(payload.node_id)};
-                                   if (!result) {
-                                       return;
-                                   }
-
-                                   std::visit(Overloaded {[&](auto& node) -> void {
-                                                  node.set_param(payload.update);
-                                              }},
-                                              *result.value());
-                               }},
-                   cmd);
+        [[maybe_unused]] auto scheduled {
+            engine->event_scheduler_.schedule(cmd, engine->current_sample_)};
+        assert(scheduled);
     }
+
+    engine->event_scheduler_.process_block(engine->current_sample_, frame_count,
+                                           engine->node_pool_);
+
     std::ranges::fill(output_buffer, 0.0F);
     // TODO:
     engine->node_pool_.for_each_active_node(
         [&](auto& node) -> void { node.render_frame(output_buffer); });
+
+    engine->current_sample_ += frame_count;
 }
 
 } // namespace mach::engine

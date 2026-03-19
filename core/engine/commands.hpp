@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <variant>
 
-namespace mach::engine {
+namespace mach::engine::commands {
 
 using NodeId = uint64_t;
 struct AddNodePayload {
@@ -24,4 +24,9 @@ struct SetNodeParamPayload {
 using CommandPayload =
     std::variant<AddNodePayload, RemoveNodePayload, SetNodeParamPayload>;
 
-} // namespace mach::engine
+struct ScheduledCommandPayload {
+    CommandPayload command;
+    uint64_t deadline_abs_sample;
+};
+
+} // namespace mach::engine::commands
