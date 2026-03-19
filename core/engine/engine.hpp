@@ -15,7 +15,7 @@ constexpr auto COMMAND_QUEUE_SIZE {1024UZ};
 
 struct EngineInitParams {
     uint32_t sample_rate;
-    uint32_t block_size;
+    std::size_t block_size;
     uint32_t max_node_pool_size;
 };
 
@@ -71,7 +71,7 @@ class AudioEngine {
     memory::node_pool::NodePool node_pool_;
     ipc::SPSCQueue<engine::CommandPayload, COMMAND_QUEUE_SIZE> command_queue_ {};
     uint32_t sample_rate_;
-    uint32_t block_size_;
+    std::size_t block_size_;
 
     ma_device device_ {};
 };

@@ -14,7 +14,7 @@ constexpr float TEST_FREQUENCY {880.0F};
 
 struct TestAudioEngineFixture {
     AudioEngine engine {{.sample_rate = 44100U,
-                         .block_size = 128U,
+                         .block_size = 128UZ,
                          .max_node_pool_size = TEST_POOL_SIZE}};
 };
 
@@ -43,7 +43,7 @@ TEST_CASE_FIXTURE(TestAudioEngineFixture, "AudioEngine") {
 
     SUBCASE("add_node returns command queue full") {
         auto handle {engine.add_node<WavetableOscillator>().value()};
-        for (uint32_t i {0U}; i < COMMAND_QUEUE_SIZE; ++i) {
+        for (auto i {0UZ}; i < COMMAND_QUEUE_SIZE; ++i) {
             std::ignore = engine.set_node_parameter(handle, 0U, TEST_FREQUENCY);
         }
         CHECK(engine.add_node<WavetableOscillator>().error()
