@@ -29,7 +29,7 @@ class WavetableOscillator {
         std::visit(
             [&](const auto& table) -> void {
                 for (auto& sample : output) {
-                    sample =
+                    sample +=
                         std::decay_t<decltype(table)>::get_interpolated_sample(phase_);
                     phase_ += phase_increment_;
                 }
@@ -58,8 +58,8 @@ class WavetableOscillator {
     // NOLINTNEXTLINE standard in audio for params is 32 bits
     enum class ParamId : uint32_t { FREQUENCY = 0, WAVEFORM = 1 };
 
-    using ShapedWavetable =
-        std::variant<SineWavetable, SawtoothWavetable, TriangleWavetable, SquareWavetable>;
+    using ShapedWavetable = std::variant<SineWavetable, SawtoothWavetable,
+                                         TriangleWavetable, SquareWavetable>;
 
     [[nodiscard]] auto compute_phase_increment() const noexcept -> uint32_t {
         return static_cast<uint32_t>(frequency_hz_ / static_cast<float>(sample_rate_)

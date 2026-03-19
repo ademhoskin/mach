@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+
 include(FetchContent)
 
 FetchContent_Declare(
@@ -38,6 +39,8 @@ add_library(mach_core STATIC ${MACH_CORE_SOURCES})
 target_include_directories(mach_core PUBLIC ${CMAKE_SOURCE_DIR} ${miniaudio_SOURCE_DIR})
 target_compile_options(mach_core PRIVATE -O3 -march=native -Wall -Wextra)
 target_link_libraries(mach_core PUBLIC dl m pthread)
+set_target_properties(mach_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 
 file(GLOB_RECURSE MACH_TEST_SOURCES "tests/**/*.cpp")
 add_executable(mach_tests tests/main.cpp ${MACH_TEST_SOURCES})
