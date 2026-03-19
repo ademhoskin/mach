@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <variant>
 
-namespace mach::engine::commands {
+namespace mach::engine::commands::detail {
 
 using NodeId = uint64_t;
 struct AddNodePayload {
@@ -29,4 +29,4 @@ struct ScheduledCommandPayload {
     uint64_t deadline_abs_sample;
 };
 
-} // namespace mach::engine::commands
+} // namespace mach::engine::commands::detail

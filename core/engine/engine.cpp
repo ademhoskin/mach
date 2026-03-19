@@ -34,7 +34,7 @@ AudioEngine::~AudioEngine() noexcept {
 
 auto AudioEngine::remove_node(AudioEngine::NodeHandleID handle) noexcept
     -> std::expected<void, EngineError> {
-    if (!command_queue_.try_push(commands::RemoveNodePayload {.node_id = handle})) {
+    if (!command_queue_.try_push(commands::detail::RemoveNodePayload {.node_id = handle})) {
         // Propagate so controller knows to retry
         return std::unexpected<EngineError>(EngineError::COMMAND_QUEUE_FULL);
     }
@@ -44,7 +44,7 @@ auto AudioEngine::remove_node(AudioEngine::NodeHandleID handle) noexcept
 auto AudioEngine::set_node_parameter(AudioEngine::NodeHandleID handle, uint32_t param_id,
                                      float value) noexcept
     -> std::expected<void, EngineError> {
-    if (!command_queue_.try_push(commands::SetNodeParamPayload {
+    if (!command_queue_.try_push(commands::detail::SetNodeParamPayload {
             .node_id = handle, .update = {.param_id = param_id, .value = value}})) {
         return std::unexpected<EngineError>(EngineError::COMMAND_QUEUE_FULL);
     }
@@ -79,7 +79,7 @@ void AudioEngine::audio_callback(ma_device* device, void* output, const void* in
     auto output_buffer {
         std::span<float> {static_cast<float*>(output), frame_count * 2UZ}};
 
-    commands::CommandPayload cmd;
+    commands::detail::CommandPayload cmd;
     while (engine->command_queue_.try_pop(cmd)) {
         [[maybe_unused]] auto scheduled {
             engine->event_scheduler_.schedule(cmd, engine->current_sample_)};

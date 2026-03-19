@@ -9,7 +9,7 @@
 #include <doctest/doctest.h>
 
 using namespace mach::scheduler;
-using namespace mach::engine::commands;
+using namespace mach::engine::commands::detail;
 using namespace mach::memory::node_pool;
 using namespace mach::nodes::wavetable;
 

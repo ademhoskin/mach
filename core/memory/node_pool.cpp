@@ -10,9 +10,9 @@ auto NodePool::activate(NodeHandleID handle) noexcept -> bool {
         return false;
     }
 
-    auto expected_state {NodeSlotState::ACQUIRED};
+    auto expected_state {SlotState::ACQUIRED};
     return slots_[idx].current_state.compare_exchange_strong(expected_state,
-                                                             NodeSlotState::ACTIVE);
+                                                             SlotState::ACTIVE);
 }
 
 auto NodePool::deactivate(NodeHandleID handle) noexcept -> bool {
@@ -21,9 +21,9 @@ auto NodePool::deactivate(NodeHandleID handle) noexcept -> bool {
         return false;
     }
 
-    auto expected_state {NodeSlotState::ACTIVE};
+    auto expected_state {SlotState::ACTIVE};
     return slots_[idx].current_state.compare_exchange_strong(expected_state,
-                                                             NodeSlotState::INACTIVE);
+                                                             SlotState::INACTIVE);
 }
 
 auto NodePool::get_node(NodeHandleID handle) noexcept
@@ -33,8 +33,8 @@ auto NodePool::get_node(NodeHandleID handle) noexcept
         return std::nullopt;
     }
 
-    if (slots_[idx].current_state != NodeSlotState::ACTIVE
-        && slots_[idx].current_state != NodeSlotState::ACQUIRED) {
+    if (slots_[idx].current_state != SlotState::ACTIVE
+        && slots_[idx].current_state != SlotState::ACQUIRED) {
         return std::nullopt;
     }
 
@@ -43,10 +43,10 @@ auto NodePool::get_node(NodeHandleID handle) noexcept
 
 void NodePool::recycle(NodeHandleID handle) noexcept {
     auto [idx, generation] {unpack_node_from_handle(handle)};
-    assert(slots_[idx].current_state == NodeSlotState::INACTIVE);
+    assert(slots_[idx].current_state == SlotState::INACTIVE);
     slots_[idx].node.reset();
     slots_[idx].generation++;
-    slots_[idx].current_state.store(NodeSlotState::FREE, std::memory_order_release);
+    slots_[idx].current_state.store(SlotState::FREE, std::memory_order_release);
 }
 
 } // namespace mach::memory::node_pool

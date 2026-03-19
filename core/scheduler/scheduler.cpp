@@ -10,9 +10,9 @@ struct Overloaded : Ts... {
     using Ts::operator()...;
 };
 
-void EDFScheduler::dispatch_command(const engine::commands::CommandPayload& cmd,
+void EDFScheduler::dispatch_command(const engine::commands::detail::CommandPayload& cmd,
                                     memory::node_pool::NodePool& pool) noexcept {
-    using namespace engine::commands;
+    using namespace engine::commands::detail;
     std::visit(
         Overloaded {
             [&](const AddNodePayload& payload) -> void {
@@ -39,7 +39,7 @@ EDFScheduler::EDFScheduler(std::size_t heap_size) {
     heap_.reserve(heap_size);
 };
 
-auto EDFScheduler::schedule(const engine::commands::CommandPayload& command,
+auto EDFScheduler::schedule(const engine::commands::detail::CommandPayload& command,
                             uint64_t deadline_in_abs_sample) noexcept -> bool {
     [[unlikely]] if (heap_.size() == heap_.capacity()) { return false; }
 

@@ -43,7 +43,7 @@ TEST_CASE_FIXTURE(TestAudioEngineFixture, "AudioEngine") {
 
     SUBCASE("add_node returns command queue full") {
         auto handle {engine.add_node<WavetableOscillator>().value()};
-        for (auto i {0UZ}; i < COMMAND_QUEUE_SIZE; ++i) {
+        for (auto i {0UZ}; i < 1024UZ; ++i) {
             std::ignore = engine.set_node_parameter(handle, 0U, TEST_FREQUENCY);
         }
         CHECK(engine.add_node<WavetableOscillator>().error()

@@ -12,7 +12,6 @@
 #include <miniaudio.h>
 
 namespace mach::engine {
-constexpr auto COMMAND_QUEUE_SIZE {1024UZ};
 
 struct EngineInitParams {
     uint32_t sample_rate;
@@ -51,7 +50,7 @@ class AudioEngine {
                    *acquired_node.value());
 
         // NOTE: we activate when we pop from queue, if we fail, janitor recycles
-        if (!command_queue_.try_push(commands::AddNodePayload {.node_id = handle})) {
+        if (!command_queue_.try_push(commands::detail::AddNodePayload {.node_id = handle})) {
             return std::unexpected<EngineError>(EngineError::COMMAND_QUEUE_FULL);
         }
         return handle;
@@ -66,11 +65,13 @@ class AudioEngine {
     void stop() noexcept;
 
   private:
+    static constexpr auto COMMAND_QUEUE_SIZE {1024UZ};
+
     static void audio_callback(ma_device* device, void* output, const void* input,
                                ma_uint32 frame_count);
 
     memory::node_pool::NodePool node_pool_;
-    ipc::SPSCQueue<commands::CommandPayload, COMMAND_QUEUE_SIZE> command_queue_ {};
+    ipc::SPSCQueue<commands::detail::CommandPayload, COMMAND_QUEUE_SIZE> command_queue_ {};
     uint32_t sample_rate_;
     std::size_t block_size_;
 

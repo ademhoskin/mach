@@ -15,23 +15,12 @@ namespace mach::memory::node_pool {
 static_assert(std::endian::native == std::endian::little,
               "NodePool handle packing assumes little-endian");
 
-enum class NodeSlotState : uint8_t { FREE, ACQUIRED, ACTIVE, INACTIVE };
-
-struct alignas(constants::ALIGNAS_SIZE) NodeSlot {
-    std::atomic<NodeSlotState> current_state {NodeSlotState::FREE};
-    std::optional<nodes::AnyDSPNode> node;
-    uint32_t generation {};
-};
-
 enum class PoolError : uint8_t { CAPACITY_EXCEEDED };
-
-struct NodeAddress {
-    uint32_t slot_idx {};   // 32 bit address space
-    uint32_t generation {}; // generation index, prevents potential use after free
-};
 
 class NodePool {
   public:
+    using NodeHandleID = uint64_t;
+
     explicit NodePool(uint32_t capacity)
         // NOLINTNEXTLINE  NOTE: see private defintion
         : slots_ {std::make_unique<NodeSlot[]>(capacity)}, CAPACITY {capacity} {};
@@ -42,9 +31,9 @@ class NodePool {
         auto slots {std::span {slots_.get(), CAPACITY}};
 
         for (auto&& [idx, slot] : std::views::enumerate(slots)) {
-            auto expected_state {NodeSlotState::FREE};
+            auto expected_state {SlotState::FREE};
             if (slot.current_state.compare_exchange_strong(expected_state,
-                                                           NodeSlotState::ACQUIRED)) {
+                                                           SlotState::ACQUIRED)) {
                 slot.node.emplace(Node {std::forward<Args>(args)...});
                 return pack_node_to_handle({.slot_idx = static_cast<uint32_t>(idx),
                                             .generation = slot.generation});
@@ -54,7 +43,6 @@ class NodePool {
         return std::unexpected {PoolError::CAPACITY_EXCEEDED};
     }
 
-    using NodeHandleID = uint64_t;
     [[nodiscard]] auto activate(NodeHandleID handle) noexcept -> bool;
     [[nodiscard]] auto deactivate(NodeHandleID handle) noexcept -> bool;
     [[nodiscard]] auto get_node(NodeHandleID handle) noexcept
@@ -66,13 +54,26 @@ class NodePool {
         auto slots {std::span {slots_.get(), CAPACITY}};
         for (auto&& [idx, slot] : std::views::enumerate(slots)) {
             if (slot.current_state.load(std::memory_order_acquire)
-                == NodeSlotState::ACTIVE) {
+                == SlotState::ACTIVE) {
                 std::visit(std::forward<F>(func), slot.node.value());
             }
         }
     }
 
   private:
+    enum class SlotState : uint8_t { FREE, ACQUIRED, ACTIVE, INACTIVE };
+
+    struct NodeAddress {
+        uint32_t slot_idx {};
+        uint32_t generation {};
+    };
+
+    struct alignas(constants::ALIGNAS_SIZE) NodeSlot {
+        std::atomic<SlotState> current_state {SlotState::FREE};
+        std::optional<nodes::AnyDSPNode> node;
+        uint32_t generation {};
+    };
+
     static auto pack_node_to_handle(NodeAddress addr) noexcept -> NodeHandleID {
         return std::bit_cast<NodeHandleID>(addr);
     };
