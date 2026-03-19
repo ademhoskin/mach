@@ -17,6 +17,7 @@ chord_frequencies = [116.54, 146.83, 174.61, 207.65]
 for freq in chord_frequencies:
     osc = engine.add_node("wavetable_oscillator")
     engine.set_node_parameter(osc, 0, freq)
+    engine.set_node_parameter(osc, 1, 1 / len(chord_frequencies))
 
 engine.play()
 

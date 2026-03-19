@@ -30,7 +30,8 @@ class WavetableOscillator {
             [&](const auto& table) -> void {
                 for (auto& sample : output) {
                     sample +=
-                        std::decay_t<decltype(table)>::get_interpolated_sample(phase_);
+                        std::decay_t<decltype(table)>::get_interpolated_sample(phase_)
+                        * amplitude_;
                     phase_ += phase_increment_;
                 }
             },
@@ -41,6 +42,9 @@ class WavetableOscillator {
         switch (static_cast<ParamId>(update.param_id)) {
             case ParamId::FREQUENCY:
                 set_frequency(update.value);
+                break;
+            case ParamId::AMPLITUDE:
+                (update.value > 1.0F) ? amplitude_ = 1.0F : amplitude_ = update.value;
                 break;
             case ParamId::WAVEFORM:
                 /*
@@ -56,7 +60,7 @@ class WavetableOscillator {
 
   private:
     // NOLINTNEXTLINE standard in audio for params is 32 bits
-    enum class ParamId : uint32_t { FREQUENCY = 0, WAVEFORM = 1 };
+    enum class ParamId : uint32_t { FREQUENCY = 0, AMPLITUDE = 1, WAVEFORM = 2 };
 
     using ShapedWavetable = std::variant<SineWavetable, SawtoothWavetable,
                                          TriangleWavetable, SquareWavetable>;
@@ -96,6 +100,7 @@ class WavetableOscillator {
     uint32_t phase_increment_ {};
     ShapedWavetable wavetable_;
     Waveform waveform_ {};
+    float amplitude_ {1.0F};
 };
 
 static_assert(GeneratorNode<WavetableOscillator>);
