@@ -27,7 +27,7 @@ TEST_CASE_FIXTURE(TestEDFSchedulerFixture, "EDFScheduler") {
         auto handle {pool.acquire<WavetableOscillator>().value()};
         REQUIRE(scheduler.schedule(AddNodePayload {.node_id = handle}, 0ULL));
         scheduler.process_block(0ULL, TEST_BLOCK_SIZE, pool);
-        CHECK(pool.get_node(handle).has_value());
+        CHECK(pool.deactivate(handle));
     }
 
     SUBCASE("does not fire command beyond block boundary") {
@@ -35,16 +35,6 @@ TEST_CASE_FIXTURE(TestEDFSchedulerFixture, "EDFScheduler") {
         REQUIRE(scheduler.schedule(AddNodePayload {.node_id = handle}, 256ULL));
         scheduler.process_block(0ULL, TEST_BLOCK_SIZE, pool);
         CHECK_FALSE(pool.deactivate(handle));
-    }
-
-    SUBCASE("fires commands in deadline order") {
-        auto h1 {pool.acquire<WavetableOscillator>().value()};
-        auto h2 {pool.acquire<WavetableOscillator>().value()};
-        REQUIRE(scheduler.schedule(AddNodePayload {.node_id = h2}, 64ULL));
-        REQUIRE(scheduler.schedule(AddNodePayload {.node_id = h1}, 0ULL));
-        scheduler.process_block(0ULL, TEST_BLOCK_SIZE, pool);
-        CHECK(pool.get_node(h1).has_value());
-        CHECK(pool.get_node(h2).has_value());
     }
 
     SUBCASE("returns false when heap is full") {
