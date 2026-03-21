@@ -53,8 +53,7 @@ class NodePool {
     void for_each_active_node(F&& func) noexcept {
         auto slots {std::span {slots_.get(), CAPACITY}};
         for (auto&& [idx, slot] : std::views::enumerate(slots)) {
-            if (slot.current_state.load(std::memory_order_acquire)
-                == SlotState::ACTIVE) {
+            if (slot.current_state.load(std::memory_order_acquire) == SlotState::ACTIVE) {
                 std::visit(std::forward<F>(func), slot.node.value());
             }
         }

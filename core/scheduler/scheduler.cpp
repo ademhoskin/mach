@@ -11,7 +11,8 @@ struct Overloaded : Ts... {
 };
 
 void EDFScheduler::dispatch_command(const engine::commands::detail::CommandPayload& cmd,
-                                    memory::node_pool::NodePool& pool) noexcept {
+                                    memory::node_pool::NodePool& pool,
+                                    janitor::JanitorThread& janitor) noexcept {
     using namespace engine::commands::detail;
     std::visit(
         Overloaded {
@@ -22,6 +23,9 @@ void EDFScheduler::dispatch_command(const engine::commands::detail::CommandPaylo
             [&](const RemoveNodePayload& payload) -> void {
                 [[maybe_unused]] auto deactivated {pool.deactivate(payload.node_id)};
                 assert(deactivated);
+                [[maybe_unused]] auto enqueued {
+                    janitor.enqueue_dead_node(payload.node_id)};
+                assert(enqueued);
             },
             [&](const SetNodeParamPayload& payload) -> void {
                 auto node {pool.get_node(payload.node_id)};
@@ -49,13 +53,14 @@ auto EDFScheduler::schedule(const engine::commands::detail::CommandPayload& comm
 }
 
 void EDFScheduler::process_block(uint64_t current_abs_sample, std::size_t block_size,
-                                 memory::node_pool::NodePool& pool) noexcept {
+                                 memory::node_pool::NodePool& pool,
+                                 janitor::JanitorThread& janitor) noexcept {
     uint64_t block_end {current_abs_sample + block_size};
     while (!heap_.empty() && heap_.front().deadline_abs_sample < block_end) {
         std::ranges::pop_heap(heap_, COMPARE_DEADLINE);
         auto cmd {heap_.back()};
         heap_.pop_back();
-        dispatch_command(cmd.command, pool);
+        dispatch_command(cmd.command, pool, janitor);
     }
 }
 

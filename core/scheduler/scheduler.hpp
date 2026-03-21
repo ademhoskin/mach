@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/engine/commands.hpp"
+#include "core/janitor/janitor.hpp"
 #include "core/memory/node_pool.hpp"
 
 #include <cassert>
@@ -17,7 +18,8 @@ class EDFScheduler {
                                 uint64_t deadline_in_abs_sample) noexcept -> bool;
 
     void process_block(uint64_t current_abs_sample, std::size_t block_size,
-                       memory::node_pool::NodePool& pool) noexcept;
+                       memory::node_pool::NodePool& pool,
+                       janitor::JanitorThread& janitor) noexcept;
 
   private:
     struct ScheduledCommand {
@@ -31,7 +33,8 @@ class EDFScheduler {
     };
 
     static void dispatch_command(const engine::commands::detail::CommandPayload& cmd,
-                                 memory::node_pool::NodePool& pool) noexcept;
+                                 memory::node_pool::NodePool& pool,
+                                 janitor::JanitorThread& janitor) noexcept;
 
     std::vector<ScheduledCommand> heap_;
 };

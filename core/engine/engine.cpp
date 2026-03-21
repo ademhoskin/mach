@@ -12,9 +12,13 @@
 namespace mach::engine {
 AudioEngine::AudioEngine(const EngineInitParams& params) noexcept
     : node_pool_ {params.max_node_pool_size},
-      command_queue_ {std::bit_ceil(static_cast<std::size_t>(params.max_node_pool_size) * 4UZ)},
+      command_queue_ {
+          std::bit_ceil(static_cast<std::size_t>(params.max_node_pool_size) * 4UZ)},
       sample_rate_ {params.sample_rate}, block_size_ {params.block_size},
-      event_scheduler_ {std::bit_ceil(static_cast<std::size_t>(params.max_node_pool_size) * 4UZ)} {
+      event_scheduler_ {
+          std::bit_ceil(static_cast<std::size_t>(params.max_node_pool_size) * 4UZ)},
+      janitor_ {node_pool_,
+                std::bit_ceil(static_cast<std::size_t>(params.max_node_pool_size))} {
     ma_device_config config {ma_device_config_init(ma_device_type_playback)};
     config.playback.format = ma_format_f32;
     config.playback.channels = 2;
@@ -79,7 +83,7 @@ void AudioEngine::stop() noexcept {
         assert(scheduled);
     }
 
-    event_scheduler_.process_block(current_sample_, 0, node_pool_);
+    event_scheduler_.process_block(current_sample_, 0, node_pool_, janitor_);
 }
 
 // NOLINTNEXTLINE we are matching miniaudio API
@@ -99,7 +103,7 @@ void AudioEngine::audio_callback(ma_device* device, void* output, const void* in
     }
 
     engine->event_scheduler_.process_block(engine->current_sample_, frame_count,
-                                           engine->node_pool_);
+                                           engine->node_pool_, engine->janitor_);
 
     std::ranges::fill(output_buffer, 0.0F);
     engine->node_pool_.for_each_active_node(

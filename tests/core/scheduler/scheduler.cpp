@@ -4,6 +4,7 @@
 #include "core/memory/node_pool.hpp"
 #include "core/nodes/wavetable/wavetable_osc.hpp"
 
+#include <bit>
 #include <cstdint>
 
 #include <doctest/doctest.h>
@@ -19,6 +20,8 @@ constexpr uint32_t TEST_POOL_SIZE {4U};
 
 struct TestEDFSchedulerFixture {
     NodePool pool {TEST_POOL_SIZE};
+    mach::janitor::JanitorThread janitor {
+        pool, std::bit_ceil(static_cast<std::size_t>(TEST_POOL_SIZE))};
     EDFScheduler scheduler {TEST_HEAP_SIZE};
 };
 
@@ -26,14 +29,14 @@ TEST_CASE_FIXTURE(TestEDFSchedulerFixture, "EDFScheduler") {
     SUBCASE("schedules and fires command within block") {
         auto handle {pool.acquire<WavetableOscillator>().value()};
         REQUIRE(scheduler.schedule(AddNodePayload {.node_id = handle}, 0ULL));
-        scheduler.process_block(0ULL, TEST_BLOCK_SIZE, pool);
+        scheduler.process_block(0ULL, TEST_BLOCK_SIZE, pool, janitor);
         CHECK(pool.deactivate(handle));
     }
 
     SUBCASE("does not fire command beyond block boundary") {
         auto handle {pool.acquire<WavetableOscillator>().value()};
         REQUIRE(scheduler.schedule(AddNodePayload {.node_id = handle}, 256ULL));
-        scheduler.process_block(0ULL, TEST_BLOCK_SIZE, pool);
+        scheduler.process_block(0ULL, TEST_BLOCK_SIZE, pool, janitor);
         CHECK_FALSE(pool.deactivate(handle));
     }
 

@@ -50,7 +50,8 @@ class AudioEngine {
                    *acquired_node.value());
 
         // NOTE: we activate when we pop from queue, if we fail, janitor recycles
-        if (!command_queue_.try_push(commands::detail::AddNodePayload {.node_id = handle})) {
+        if (!command_queue_.try_push(
+                commands::detail::AddNodePayload {.node_id = handle})) {
             return std::unexpected<EngineError>(EngineError::COMMAND_QUEUE_FULL);
         }
         return handle;
@@ -76,6 +77,7 @@ class AudioEngine {
     ma_device device_ {};
 
     scheduler::EDFScheduler event_scheduler_;
+    janitor::JanitorThread janitor_;
     uint64_t current_sample_ {0ULL};
 };
 
