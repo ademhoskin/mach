@@ -65,13 +65,11 @@ class AudioEngine {
     void stop() noexcept;
 
   private:
-    static constexpr auto COMMAND_QUEUE_SIZE {1024UZ};
-
     static void audio_callback(ma_device* device, void* output, const void* input,
                                ma_uint32 frame_count);
 
     memory::node_pool::NodePool node_pool_;
-    ipc::SPSCQueue<commands::detail::CommandPayload, COMMAND_QUEUE_SIZE> command_queue_ {};
+    ipc::SPSCQueue<commands::detail::CommandPayload> command_queue_;
     uint32_t sample_rate_;
     std::size_t block_size_;
 

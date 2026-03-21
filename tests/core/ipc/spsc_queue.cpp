@@ -6,7 +6,7 @@ constexpr auto VALID_POWER_OF_TWO_SIZE {4UZ};
 constexpr auto USABLE_CAPACITY {VALID_POWER_OF_TWO_SIZE - 1};
 
 struct TestQueueFixture {
-    mach::ipc::SPSCQueue<int, VALID_POWER_OF_TWO_SIZE> queue {};
+    mach::ipc::SPSCQueue<int> queue {VALID_POWER_OF_TWO_SIZE};
 };
 
 TEST_CASE_FIXTURE(TestQueueFixture, "SPSCQueue") {

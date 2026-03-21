@@ -3,16 +3,18 @@
 #include "core/engine/commands.hpp"
 
 #include <algorithm>
+#include <bit>
 #include <iostream>
 #include <print>
 #include <span>
 #include <string>
 
 namespace mach::engine {
-// NOTE: we fail fdst for now, will make more robust after getting callback to work
 AudioEngine::AudioEngine(const EngineInitParams& params) noexcept
-    : node_pool_ {params.max_node_pool_size}, sample_rate_ {params.sample_rate},
-      block_size_ {params.block_size}, event_scheduler_ {COMMAND_QUEUE_SIZE} {
+    : node_pool_ {params.max_node_pool_size},
+      command_queue_ {std::bit_ceil(static_cast<std::size_t>(params.max_node_pool_size) * 4UZ)},
+      sample_rate_ {params.sample_rate}, block_size_ {params.block_size},
+      event_scheduler_ {std::bit_ceil(static_cast<std::size_t>(params.max_node_pool_size) * 4UZ)} {
     ma_device_config config {ma_device_config_init(ma_device_type_playback)};
     config.playback.format = ma_format_f32;
     config.playback.channels = 2;
@@ -100,7 +102,6 @@ void AudioEngine::audio_callback(ma_device* device, void* output, const void* in
                                            engine->node_pool_);
 
     std::ranges::fill(output_buffer, 0.0F);
-    // TODO:
     engine->node_pool_.for_each_active_node(
         [&](auto& node) -> void { node.render_frame(output_buffer); });
 

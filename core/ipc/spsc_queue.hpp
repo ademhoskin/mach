@@ -2,10 +2,11 @@
 
 #include "core/common/constants.hpp"
 
-#include <array>
 #include <atomic>
 #include <bit>
+#include <cassert>
 #include <cstddef>
+#include <memory>
 #include <type_traits>
 
 namespace mach::ipc {
@@ -13,14 +14,16 @@ namespace mach::ipc {
 template<typename T>
 concept ValidQueueElement = std::is_trivially_copyable_v<T>;
 
-template<std::size_t N>
-concept ValidQueueSize = N > 1 && std::has_single_bit(N);
-
-template<typename QueueElement, std::size_t QueueSize>
-    requires(ValidQueueElement<QueueElement> && ValidQueueSize<QueueSize>)
-
+template<typename QueueElement>
+    requires(ValidQueueElement<QueueElement>)
 class SPSCQueue {
   public:
+    explicit SPSCQueue(std::size_t capacity)
+        : CAPACITY {capacity}, MASK {capacity - 1},
+          ring_buffer_ {std::make_unique<QueueElement[]>(capacity)} { // NOLINT
+        assert(capacity > 1 && std::has_single_bit(capacity));
+    }
+
     [[nodiscard]] auto try_push(const QueueElement& item) noexcept -> bool {
         const auto OLD_WRITER_IDX {writer_idx_.load(std::memory_order_relaxed)};
         const auto NEW_WRITER_IDX {(OLD_WRITER_IDX + 1) & MASK};
@@ -50,12 +53,12 @@ class SPSCQueue {
     };
 
   private:
-    static constexpr std::size_t MASK {QueueSize - 1};
+    const std::size_t CAPACITY; // NOLINT
+    const std::size_t MASK;     // NOLINT
 
     alignas(mach::constants::ALIGNAS_SIZE) std::atomic_size_t reader_idx_ {0UZ};
     alignas(mach::constants::ALIGNAS_SIZE) std::atomic_size_t writer_idx_ {0UZ};
-    alignas(mach::constants::ALIGNAS_SIZE)
-        std::array<QueueElement, QueueSize> ring_buffer_ {};
+    std::unique_ptr<QueueElement[]> ring_buffer_; // NOLINT
 };
 
 } // namespace mach::ipc
