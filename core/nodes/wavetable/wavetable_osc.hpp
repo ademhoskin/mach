@@ -60,15 +60,23 @@ class WavetableOscillator {
 
     static constexpr uint32_t FREQ_PARAM_ID {0U};
     static constexpr uint32_t AMP_PARAM_ID {1U};
+    static constexpr uint32_t WAVE_PARAM_ID {2U};
+
+    [[nodiscard]] static auto get_params() noexcept -> std::array<ParamDescriptor, 3> {
+        static constexpr std::array<ParamDescriptor, 3> PARAMS {{
+            {.param_id = FREQ_PARAM_ID, .name = "frequency"},
+            {.param_id = AMP_PARAM_ID, .name = "amplitude"},
+            {.param_id = WAVE_PARAM_ID, .name = "waveform"},
+        }};
+        return PARAMS;
+    }
 
   private:
-    static constexpr uint32_t WAVE_PARAM_ID {2U}; // not required to expose
-
     // NOLINTNEXTLINE uint32_t is convention for audio
     enum class ParamId : uint32_t {
         FREQUENCY = FREQ_PARAM_ID,
         AMPLITUDE = AMP_PARAM_ID,
-        WAVEFORM = WAVE_PARAM_ID
+        WAVEFORM = WAVE_PARAM_ID,
     };
 
     using ShapedWavetable = std::variant<SineWavetable, SawtoothWavetable,

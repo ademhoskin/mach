@@ -72,7 +72,12 @@ target_link_libraries(mach_bench PRIVATE mach_core)
 target_compile_options(mach_bench PRIVATE ${MACH_OPT_FLAGS})
 target_include_directories(mach_bench PRIVATE ${CMAKE_SOURCE_DIR})
 
-nanobind_add_module(_mach_ext STABLE_ABI python/mach/bindings.cpp)
+nanobind_add_module(_mach_ext STABLE_ABI
+    python/mach/bindings.cpp
+    python/mach/bind_enums.cpp
+    python/mach/bind_node_handle.cpp
+    python/mach/bind_engine.cpp
+)
 target_link_libraries(_mach_ext PRIVATE mach_core)
 target_compile_options(_mach_ext PRIVATE ${MACH_OPT_FLAGS})
 
