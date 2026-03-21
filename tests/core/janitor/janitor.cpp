@@ -16,7 +16,7 @@ using namespace mach::nodes::wavetable;
 
 constexpr uint32_t TEST_POOL_SIZE {4U};
 constexpr auto TEST_QUEUE_CAPACITY {
-    std::bit_ceil(static_cast<std::size_t>(TEST_POOL_SIZE))};
+    std::bit_ceil(static_cast<std::size_t>(TEST_POOL_SIZE) * 4UZ)};
 
 struct TestJanitorFixture {
     NodePool pool {TEST_POOL_SIZE};
