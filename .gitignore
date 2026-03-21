@@ -8,6 +8,11 @@ __pycache__/
 *.so
 python/mach/_mach_ext*.so
 
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+!example_nb.ipynb
+
 # Editor
 .idea/
 .vscode/
