@@ -4,7 +4,7 @@ Headless programmatic audio engine. C++23 core, Python 3.14 control plane via `n
 
 **Toolchain:** C++23 (`std::mdspan`, `std::flat_map`, `std::expected`) + Python 3.14. We are bleeding edge — use modern features, don't polyfill things the standard now provides.
 
-**Code guidance:** Do not write C++ directly. Provide idiomatic pseudocode so the user can write the header and implementation themselves.
+**Code guidance:** Write idiomatic C++23 directly. Follow existing conventions in the codebase.
 
 ## The One Rule
 
