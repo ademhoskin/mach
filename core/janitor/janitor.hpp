@@ -10,7 +10,7 @@
 
 namespace mach::janitor {
 class JanitorThread {
-  public:
+public:
     using NodeHandleID = memory::node_pool::NodePool::NodeHandleID;
 
     explicit JanitorThread(memory::node_pool::NodePool& pool,
@@ -40,7 +40,7 @@ class JanitorThread {
         return true;
     }
 
-  private:
+private:
     static void run_thread(const std::stop_token& stop_token,
                            JanitorThread& self) noexcept {
         while (!stop_token.stop_requested()) {

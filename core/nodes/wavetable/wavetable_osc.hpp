@@ -13,7 +13,7 @@ namespace mach::nodes::wavetable {
 enum class Waveform : uint8_t { SINE, SAWTOOTH, TRIANGLE, SQUARE };
 
 class WavetableOscillator {
-  public:
+public:
     explicit WavetableOscillator(
         uint32_t sample_rate = mach::constants::DEFAULT_SAMPLE_RATE,
         Waveform waveform = Waveform::SINE) noexcept
@@ -71,7 +71,7 @@ class WavetableOscillator {
         return PARAMS;
     }
 
-  private:
+private:
     // NOLINTNEXTLINE uint32_t is convention for audio
     enum class ParamId : uint32_t {
         FREQUENCY = FREQ_PARAM_ID,

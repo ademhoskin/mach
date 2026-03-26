@@ -22,7 +22,7 @@ struct EngineInitParams {
 enum class EngineError : uint8_t { POOL_CAPACITY_EXCEEDED, COMMAND_QUEUE_FULL };
 
 class AudioEngine {
-  public:
+public:
     explicit AudioEngine(const EngineInitParams& params) noexcept;
     ~AudioEngine() noexcept;
 
@@ -66,7 +66,7 @@ class AudioEngine {
     void play() noexcept;
     void stop() noexcept;
 
-  private:
+private:
     static void audio_callback(ma_device* device, void* output, const void* input,
                                ma_uint32 frame_count);
 

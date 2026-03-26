@@ -17,7 +17,7 @@ concept ValidQueueElement = std::is_trivially_copyable_v<T>;
 template<typename QueueElement>
     requires(ValidQueueElement<QueueElement>)
 class SPSCQueue {
-  public:
+public:
     explicit SPSCQueue(std::size_t capacity)
         : CAPACITY {capacity}, MASK {capacity - 1},
           ring_buffer_ {std::make_unique<QueueElement[]>(capacity)} { // NOLINT
@@ -52,7 +52,7 @@ class SPSCQueue {
         return true;
     };
 
-  private:
+private:
     const std::size_t CAPACITY; // NOLINT
     const std::size_t MASK;     // NOLINT
 

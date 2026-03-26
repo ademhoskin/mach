@@ -66,7 +66,7 @@ constexpr auto compute_centered_phase_angle(const std::size_t IDX) noexcept -> f
 
 template<typename Shape, std::size_t TableSize = DEFAULT_TABLE_SIZE>
 class Wavetable {
-  public:
+public:
     // Uses linear interpolation
     // TODO: Read how to use 4 point cubic interpolation
     [[nodiscard]] static auto get_interpolated_sample(const uint32_t PHASE) noexcept
@@ -89,7 +89,7 @@ class Wavetable {
         return SAMPLE_ONE + (FLOAT_KNOWN_POINT_ONE_DIFF * SLOPE);
     };
 
-  private:
+private:
     static constexpr auto generate() noexcept -> std::array<float, TableSize> {
         std::array<float, TableSize> wavetable {};
         auto idx {0UZ};

@@ -22,7 +22,9 @@ concept DSPNode = requires(Node node, ParamDescriptor param, float sample_rate,
                            NodeParamUpdate update) {
     { node.set_sample_rate(sample_rate) } noexcept -> std::same_as<void>;
     { node.set_param(update) } noexcept -> std::same_as<void>;
-    { Node::get_params() } noexcept -> std::convertible_to<std::span<const ParamDescriptor>>;
+    {
+        Node::get_params()
+    } noexcept -> std::convertible_to<std::span<const ParamDescriptor>>;
 };
 
 template<typename Node>

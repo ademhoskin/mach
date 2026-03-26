@@ -18,7 +18,7 @@ static_assert(std::endian::native == std::endian::little,
 enum class PoolError : uint8_t { CAPACITY_EXCEEDED };
 
 class NodePool {
-  public:
+public:
     using NodeHandleID = uint64_t;
 
     explicit NodePool(uint32_t capacity)
@@ -59,7 +59,7 @@ class NodePool {
         }
     }
 
-  private:
+private:
     enum class SlotState : uint8_t { FREE, ACQUIRED, ACTIVE, INACTIVE };
 
     struct NodeAddress {

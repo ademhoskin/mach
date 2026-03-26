@@ -11,6 +11,7 @@ UseTab: Never
 IndentCaseLabels: true
 IndentPPDirectives: BeforeHash
 NamespaceIndentation: None
+AccessModifierOffset: -4
 
 # Column limit
 ColumnLimit: 90

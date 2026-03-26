@@ -11,7 +11,7 @@
 namespace mach::scheduler {
 
 class EDFScheduler {
-  public:
+public:
     explicit EDFScheduler(std::size_t heap_size);
 
     [[nodiscard]] auto schedule(const engine::commands::detail::CommandPayload& command,
@@ -21,7 +21,7 @@ class EDFScheduler {
                        memory::node_pool::NodePool& pool,
                        janitor::JanitorThread& janitor) noexcept;
 
-  private:
+private:
     struct ScheduledCommand {
         uint64_t deadline_abs_sample;
         engine::commands::detail::CommandPayload command;
