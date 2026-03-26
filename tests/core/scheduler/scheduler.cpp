@@ -22,6 +22,7 @@ struct TestEDFSchedulerFixture {
     NodePool pool {TEST_POOL_SIZE};
     mach::janitor::JanitorThread janitor {
         pool, std::bit_ceil(static_cast<std::size_t>(TEST_POOL_SIZE))};
+    mach::graph::ConnectionTable connections {TEST_HEAP_SIZE};
     EDFScheduler scheduler {TEST_HEAP_SIZE};
 };
 
@@ -29,14 +30,14 @@ TEST_CASE_FIXTURE(TestEDFSchedulerFixture, "EDFScheduler") {
     SUBCASE("schedules and fires command within block") {
         auto handle {pool.acquire<WavetableOscillator>().value()};
         REQUIRE(scheduler.schedule(AddNodePayload {.node_id = handle}, 0ULL));
-        scheduler.process_block(0ULL, TEST_BLOCK_SIZE, pool, janitor);
+        scheduler.process_block(0ULL, TEST_BLOCK_SIZE, pool, janitor, connections);
         CHECK(pool.deactivate(handle));
     }
 
     SUBCASE("does not fire command beyond block boundary") {
         auto handle {pool.acquire<WavetableOscillator>().value()};
         REQUIRE(scheduler.schedule(AddNodePayload {.node_id = handle}, 256ULL));
-        scheduler.process_block(0ULL, TEST_BLOCK_SIZE, pool, janitor);
+        scheduler.process_block(0ULL, TEST_BLOCK_SIZE, pool, janitor, connections);
         CHECK_FALSE(pool.deactivate(handle));
     }
 

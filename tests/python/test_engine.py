@@ -18,6 +18,7 @@ def test_remove_node(engine):
 
 
 def test_pool_exhaustion_raises(engine):
-    nodes = [engine.add_node("wavetable_oscillator") for _ in range(16)]
+    # NOTE: master output takes one slot at construction, so 15 fills the pool
+    [engine.add_node("wavetable_oscillator") for _ in range(15)]
     with pytest.raises(mach.EngineError, match="pool capacity exceeded"):
         engine.add_node("wavetable_oscillator")

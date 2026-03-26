@@ -28,6 +28,13 @@ concept DSPNode = requires(Node node, ParamDescriptor param, float sample_rate,
 };
 
 template<typename Node>
+concept SinkNode =
+    DSPNode<Node>
+    && requires(Node node, const std::span<float> INPUT, std::span<float> output) {
+           { node.mix_to_output(INPUT, output) } noexcept -> std::same_as<void>;
+       };
+
+template<typename Node>
 concept GeneratorNode = DSPNode<Node> && requires(Node node, std::span<float> output) {
     { node.render_frame(output) } noexcept -> std::same_as<void>;
     { Node::FREQ_PARAM_ID } -> std::same_as<const uint32_t&>;

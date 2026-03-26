@@ -44,6 +44,21 @@ void register_engine(nb::module_& m) {
                      throw_engine_error(result.error());
                  }
              })
+        .def("connect",
+             [](AudioEngine& engine, const NodeHandle& source,
+                const NodeHandle& dest) -> void {
+                 auto result = engine.connect(source.id, dest.id);
+                 if (!result) {
+                     throw_engine_error(result.error());
+                 }
+             })
+        .def("get_master_output",
+             [](AudioEngine& engine) -> NodeHandle {
+                 NodeHandle handle;
+                 handle.engine = &engine;
+                 handle.id = engine.get_master_output();
+                 return handle;
+             })
         .def("play", &AudioEngine::play, nb::call_guard<nb::gil_scoped_release>())
         .def("stop", &AudioEngine::stop, nb::call_guard<nb::gil_scoped_release>());
 }

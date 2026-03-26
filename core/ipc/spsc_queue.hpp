@@ -3,7 +3,6 @@
 #include "core/common/constants.hpp"
 
 #include <atomic>
-#include <bit>
 #include <cassert>
 #include <cstddef>
 #include <memory>

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/engine/commands.hpp"
+#include "core/graph/connection_table.hpp"
 #include "core/ipc/spsc_queue.hpp"
 #include "core/memory/node_pool.hpp"
 #include "core/scheduler/scheduler.hpp"
@@ -63,6 +64,11 @@ public:
     auto set_node_parameter(NodeHandleID handle, uint32_t param_id, float value) noexcept
         -> std::expected<void, EngineError>;
 
+    auto connect(NodeHandleID source, NodeHandleID dest) noexcept
+        -> std::expected<void, EngineError>;
+
+    [[nodiscard]] auto get_master_output() const noexcept -> NodeHandleID;
+
     void play() noexcept;
     void stop() noexcept;
 
@@ -79,6 +85,8 @@ private:
 
     scheduler::EDFScheduler event_scheduler_;
     janitor::JanitorThread janitor_;
+    graph::ConnectionTable connection_table_;
+    NodeHandleID master_output_id_;
     uint64_t current_sample_ {0ULL};
 };
 

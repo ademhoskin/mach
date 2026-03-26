@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/engine/commands.hpp"
+#include "core/graph/connection_table.hpp"
 #include "core/janitor/janitor.hpp"
 #include "core/memory/node_pool.hpp"
 
@@ -19,7 +20,8 @@ public:
 
     void process_block(uint64_t current_abs_sample, std::size_t block_size,
                        memory::node_pool::NodePool& pool,
-                       janitor::JanitorThread& janitor) noexcept;
+                       janitor::JanitorThread& janitor,
+                       graph::ConnectionTable& connections) noexcept;
 
 private:
     struct ScheduledCommand {
@@ -34,7 +36,8 @@ private:
 
     static void dispatch_command(const engine::commands::detail::CommandPayload& cmd,
                                  memory::node_pool::NodePool& pool,
-                                 janitor::JanitorThread& janitor) noexcept;
+                                 janitor::JanitorThread& janitor,
+                                 graph::ConnectionTable& connections) noexcept;
 
     std::vector<ScheduledCommand> heap_;
 };

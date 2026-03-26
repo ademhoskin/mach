@@ -21,8 +21,14 @@ struct SetNodeParamPayload {
     nodes::NodeParamUpdate update;
 };
 
+struct ConnectNodesPayload {
+    NodeId source_id;
+    NodeId dest_id;
+};
+
 using CommandPayload =
-    std::variant<AddNodePayload, RemoveNodePayload, SetNodeParamPayload>;
+    std::variant<AddNodePayload, RemoveNodePayload, SetNodeParamPayload,
+                 ConnectNodesPayload>;
 
 struct ScheduledCommandPayload {
     CommandPayload command;
