@@ -38,7 +38,7 @@ AudioEngine::~AudioEngine() noexcept {
     ma_device_uninit(&device_);
 }
 
-auto AudioEngine::remove_node(AudioEngine::NodeHandleID handle) noexcept
+auto AudioEngine::remove_node(const AudioEngine::NodeHandleID& handle) noexcept
     -> std::expected<void, EngineError> {
     if (!command_queue_.try_push(
             commands::detail::RemoveNodePayload {.node_id = handle})) {

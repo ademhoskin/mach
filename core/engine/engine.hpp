@@ -57,7 +57,8 @@ class AudioEngine {
         return handle;
     };
 
-    auto remove_node(NodeHandleID handle) noexcept -> std::expected<void, EngineError>;
+    auto remove_node(const NodeHandleID& handle) noexcept
+        -> std::expected<void, EngineError>;
 
     auto set_node_parameter(NodeHandleID handle, uint32_t param_id, float value) noexcept
         -> std::expected<void, EngineError>;
