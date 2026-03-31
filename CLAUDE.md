@@ -79,7 +79,7 @@ engine.play()
 ## Key Conventions
 
 - `alignas(64)` on any struct with atomic indices to prevent false sharing
-- Node slot lifecycle: `Free → Acquired → Active → Dead → Free` — Janitor is the only thread that runs destructors
+- Node slot lifecycle: `Free → Acquired → Active → Abandoned → Free` (also `Acquired → Abandoned` on command queue full) — Janitor is the only thread that runs destructors
 - Asset lifecycle: `Unloaded → Loading → Ready → Referenced → Ready → Unloaded` — audio thread holds read-only pointers only, never frees
 - Shutdown order: stop audio callback → join Janitor + Disk I/O → join Telemetry → free all regions
 - Pool exhaustion: fail-fast, raise to Python immediately — never block

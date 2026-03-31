@@ -31,14 +31,14 @@ TEST_CASE_FIXTURE(TestEDFSchedulerFixture, "EDFScheduler") {
         auto handle {pool.acquire<WavetableOscillator>().value()};
         REQUIRE(scheduler.schedule(AddNodePayload {.node_id = handle}, 0ULL));
         scheduler.process_block(0ULL, TEST_BLOCK_SIZE, pool, janitor, connections);
-        CHECK(pool.deactivate(handle));
+        CHECK(pool.abandon_active_nodes(handle));
     }
 
     SUBCASE("does not fire command beyond block boundary") {
         auto handle {pool.acquire<WavetableOscillator>().value()};
         REQUIRE(scheduler.schedule(AddNodePayload {.node_id = handle}, 256ULL));
         scheduler.process_block(0ULL, TEST_BLOCK_SIZE, pool, janitor, connections);
-        CHECK_FALSE(pool.deactivate(handle));
+        CHECK_FALSE(pool.abandon_active_nodes(handle));
     }
 
     SUBCASE("returns false when heap is full") {

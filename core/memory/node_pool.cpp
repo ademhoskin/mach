@@ -15,7 +15,7 @@ auto NodePool::activate(NodeHandleID handle) noexcept -> bool {
                                                              SlotState::ACTIVE);
 }
 
-auto NodePool::deactivate(NodeHandleID handle) noexcept -> bool {
+auto NodePool::abandon_active_nodes(NodeHandleID handle) noexcept -> bool {
     auto [idx, generation] {unpack_node_from_handle(handle)};
     if (generation != slots_[idx].generation) {
         return false;
@@ -23,7 +23,7 @@ auto NodePool::deactivate(NodeHandleID handle) noexcept -> bool {
 
     auto expected_state {SlotState::ACTIVE};
     return slots_[idx].current_state.compare_exchange_strong(expected_state,
-                                                             SlotState::INACTIVE);
+                                                             SlotState::ABANDONED);
 }
 
 auto NodePool::get_node(NodeHandleID handle) noexcept
@@ -41,9 +41,20 @@ auto NodePool::get_node(NodeHandleID handle) noexcept
     return &slots_[idx].node.value();
 }
 
+auto NodePool::abandon_acquired_node(NodeHandleID handle) noexcept -> bool {
+    auto [idx, generation] {unpack_node_from_handle(handle)};
+    if (generation != slots_[idx].generation) {
+        return false;
+    }
+
+    auto expected_state {SlotState::ACQUIRED};
+    return slots_[idx].current_state.compare_exchange_strong(expected_state,
+                                                             SlotState::ABANDONED);
+}
+
 void NodePool::recycle(NodeHandleID handle) noexcept {
     auto [idx, generation] {unpack_node_from_handle(handle)};
-    assert(slots_[idx].current_state == SlotState::INACTIVE);
+    assert(slots_[idx].current_state == SlotState::ABANDONED);
     slots_[idx].node.reset();
     slots_[idx].generation++;
     slots_[idx].current_state.store(SlotState::FREE, std::memory_order_release);

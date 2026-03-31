@@ -38,24 +38,24 @@ TEST_CASE_FIXTURE(TestNodePoolFixture, "NodePool") {
     SUBCASE("successfully detects stale generation during activation") {
         auto handle {pool.acquire<WavetableOscillator>(wavetable_osc).value()};
         std::ignore = pool.activate(handle);
-        std::ignore = pool.deactivate(handle);
+        std::ignore = pool.abandon_active_nodes(handle);
         pool.recycle(handle);
         CHECK_FALSE(pool.activate(handle));
     }
 
     SUBCASE("sucessfully deactivates only on active nodes") {
         auto handle {pool.acquire<WavetableOscillator>(wavetable_osc).value()};
-        CHECK_FALSE(pool.deactivate(handle)); // we just acquired
+        CHECK_FALSE(pool.abandon_active_nodes(handle)); // we just acquired
 
         std::ignore = pool.activate(handle);
-        CHECK(pool.deactivate(handle));
-        CHECK_FALSE(pool.deactivate(handle)); // we already deactivated
+        CHECK(pool.abandon_active_nodes(handle));
+        CHECK_FALSE(pool.abandon_active_nodes(handle)); // we already deactivated
     }
 
     SUBCASE("bumps generation and clears slot on successfulrecycles") {
         auto handle {pool.acquire<WavetableOscillator>(wavetable_osc).value()};
         std::ignore = pool.activate(handle);
-        std::ignore = pool.deactivate(handle);
+        std::ignore = pool.abandon_active_nodes(handle);
         pool.recycle(handle);
 
         CHECK_FALSE(pool.activate(
@@ -77,7 +77,7 @@ TEST_CASE_FIXTURE(TestNodePoolFixture, "NodePool") {
         SUBCASE("after recycling a node") {
             auto handle {pool.acquire<WavetableOscillator>(wavetable_osc).value()};
             std::ignore = pool.activate(handle);
-            std::ignore = pool.deactivate(handle);
+            std::ignore = pool.abandon_active_nodes(handle);
             pool.recycle(handle);
             CHECK_FALSE(pool.get_node(handle).has_value());
         }
@@ -94,14 +94,33 @@ TEST_CASE_FIXTURE(TestNodePoolFixture, "NodePool") {
                 node.set_param({.param_id = 0U, .value = TEST_FREQUENCY});
             },
             *maybe_node.value());
-        CHECK(pool.deactivate(handle));
+        CHECK(pool.abandon_active_nodes(handle));
+    }
+
+    SUBCASE("successfully abandons an acquired node") {
+        auto handle {pool.acquire<WavetableOscillator>(wavetable_osc).value()};
+        CHECK(pool.abandon_acquired_node(handle));
+    }
+
+    SUBCASE("abandon fails on active node") {
+        auto handle {pool.acquire<WavetableOscillator>(wavetable_osc).value()};
+        std::ignore = pool.activate(handle);
+        CHECK_FALSE(pool.abandon_acquired_node(handle));
+    }
+
+    SUBCASE("slot is reclaimable after abandon and recycle") {
+        auto handle {pool.acquire<WavetableOscillator>(wavetable_osc).value()};
+        CHECK(pool.abandon_acquired_node(handle));
+        pool.recycle(handle);
+        auto new_handle {pool.acquire<WavetableOscillator>(wavetable_osc).value()};
+        CHECK_FALSE(new_handle == handle); // generation bumped
     }
 
     SUBCASE("has successful happy path on acquire, activate, deactivate, recycle") {
         auto handle {pool.acquire<WavetableOscillator>(wavetable_osc).value()};
         CHECK(pool.activate(handle));
         CHECK(pool.get_node(handle).has_value());
-        CHECK(pool.deactivate(handle));
+        CHECK(pool.abandon_active_nodes(handle));
         CHECK_FALSE(pool.get_node(handle).has_value());
 
         pool.recycle(handle);

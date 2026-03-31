@@ -29,7 +29,7 @@ TEST_CASE_FIXTURE(TestJanitorFixture, "Janitor") {
     SUBCASE("recycles inactive node back to free") {
         auto handle {pool.acquire<WavetableOscillator>().value()};
         REQUIRE(pool.activate(handle));
-        REQUIRE(pool.deactivate(handle));
+        REQUIRE(pool.abandon_active_nodes(handle));
         REQUIRE(janitor.enqueue_dead_node(handle));
 
         std::this_thread::sleep_for(10ms);
@@ -48,7 +48,7 @@ TEST_CASE_FIXTURE(TestJanitorFixture, "Janitor") {
         CHECK_FALSE(pool.acquire<WavetableOscillator>().has_value());
 
         for (uint32_t i {0U}; i < TEST_POOL_SIZE; ++i) {
-            REQUIRE(pool.deactivate(handles.at(i)));
+            REQUIRE(pool.abandon_active_nodes(handles.at(i)));
             REQUIRE(janitor.enqueue_dead_node(handles.at(i)));
         }
 
@@ -62,7 +62,7 @@ TEST_CASE_FIXTURE(TestJanitorFixture, "Janitor") {
     SUBCASE("enqueue returns true on valid push") {
         auto handle {pool.acquire<WavetableOscillator>().value()};
         REQUIRE(pool.activate(handle));
-        REQUIRE(pool.deactivate(handle));
+        REQUIRE(pool.abandon_active_nodes(handle));
         CHECK(janitor.enqueue_dead_node(handle));
     }
 }

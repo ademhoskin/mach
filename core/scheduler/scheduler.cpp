@@ -15,35 +15,36 @@ void EDFScheduler::dispatch_command(const engine::commands::detail::CommandPaylo
                                     janitor::JanitorThread& janitor,
                                     graph::ConnectionTable& connections) noexcept {
     using namespace engine::commands::detail;
-    std::visit(
-        Overloaded {
-            [&](const AddNodePayload& payload) -> void {
-                [[maybe_unused]] auto activated {pool.activate(payload.node_id)};
-                assert(activated);
-            },
-            [&](const RemoveNodePayload& payload) -> void {
-                connections.remove_all_for(payload.node_id);
-                [[maybe_unused]] auto deactivated {pool.deactivate(payload.node_id)};
-                assert(deactivated);
-                [[maybe_unused]] auto enqueued {
-                    janitor.enqueue_dead_node(payload.node_id)};
-                assert(enqueued);
-            },
-            [&](const SetNodeParamPayload& payload) -> void {
-                auto node {pool.get_node(payload.node_id)};
-                if (!node) {
-                    return;
-                }
-                std::visit([&](auto& node) -> void { node.set_param(payload.update); },
+    std::visit(Overloaded {
+                   [&](const AddNodePayload& payload) -> void {
+                       [[maybe_unused]] auto activated {pool.activate(payload.node_id)};
+                       assert(activated);
+                   },
+                   [&](const RemoveNodePayload& payload) -> void {
+                       connections.remove_all_for(payload.node_id);
+                       [[maybe_unused]] auto deactivated {
+                           pool.abandon_active_nodes(payload.node_id)};
+                       assert(deactivated);
+                       [[maybe_unused]] auto enqueued {
+                           janitor.enqueue_dead_node(payload.node_id)};
+                       assert(enqueued);
+                   },
+                   [&](const SetNodeParamPayload& payload) -> void {
+                       auto node {pool.get_node(payload.node_id)};
+                       if (!node) {
+                           return;
+                       }
+                       std::visit(
+                           [&](auto& node) -> void { node.set_param(payload.update); },
                            *node.value());
-            },
-            [&](const ConnectNodesPayload& payload) -> void {
-                [[maybe_unused]] auto added {
-                    connections.add(payload.source_id, payload.dest_id)};
-                assert(added);
-            },
-        },
-        cmd);
+                   },
+                   [&](const ConnectNodesPayload& payload) -> void {
+                       [[maybe_unused]] auto added {
+                           connections.add(payload.source_id, payload.dest_id)};
+                       assert(added);
+                   },
+               },
+               cmd);
 }
 
 EDFScheduler::EDFScheduler(std::size_t heap_size) {

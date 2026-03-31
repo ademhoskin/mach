@@ -40,7 +40,6 @@ public:
     auto add_node(Args&&... args) noexcept -> std::expected<NodeHandleID, EngineError> {
         auto acquire_result {node_pool_.acquire<Node>(std::forward<Args>(args)...)};
         if (!acquire_result) {
-            // propagate all the way up to the user
             return std::unexpected<EngineError>(EngineError::POOL_CAPACITY_EXCEEDED);
         }
 
@@ -50,9 +49,12 @@ public:
         std::visit([this](auto& node) -> void { node.set_sample_rate(sample_rate_); },
                    *acquired_node.value());
 
-        // NOTE: we activate when we pop from queue, if we fail, janitor recycles
         if (!command_queue_.try_push(
                 commands::detail::AddNodePayload {.node_id = handle})) {
+            [[maybe_unused]] auto abandon_result {
+                node_pool_.abandon_acquired_node(handle)};
+            assert(abandon_result);
+            janitor_.enqueue_dead_node(handle);
             return std::unexpected<EngineError>(EngineError::COMMAND_QUEUE_FULL);
         }
         return handle;

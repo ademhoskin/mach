@@ -44,7 +44,8 @@ public:
     }
 
     [[nodiscard]] auto activate(NodeHandleID handle) noexcept -> bool;
-    [[nodiscard]] auto deactivate(NodeHandleID handle) noexcept -> bool;
+    [[nodiscard]] auto abandon_active_nodes(NodeHandleID handle) noexcept -> bool;
+    [[nodiscard]] auto abandon_acquired_node(NodeHandleID handle) noexcept -> bool;
     [[nodiscard]] auto get_node(NodeHandleID handle) noexcept
         -> std::optional<nodes::AnyDSPNode*>;
     void recycle(NodeHandleID handle) noexcept;
@@ -60,7 +61,7 @@ public:
     }
 
 private:
-    enum class SlotState : uint8_t { FREE, ACQUIRED, ACTIVE, INACTIVE };
+    enum class SlotState : uint8_t { FREE, ACQUIRED, ACTIVE, ABANDONED };
 
     struct NodeAddress {
         uint32_t slot_idx {};

@@ -286,12 +286,13 @@ stateDiagram-v2
     [*] --> Free : engine init<br/>(all slots start free)
     Free --> Acquired : add_node() —<br/>Python thread claims slot<br/>from pool (O1)
     Acquired --> Active : command pushed via SPSC<br/>audio thread initializes node<br/>into slot
-    Active --> Inactive : remove_node() command<br/>audio thread stops evaluating node<br/>hands raw pointer to Janitor queue
-    Inactive --> Free : Janitor thread runs destructor<br/>returns slot to pool
+    Acquired --> Abandoned : command queue full —<br/>add_node() failure path<br/>abandon_acquired_node()
+    Active --> Abandoned : remove_node() command<br/>audio thread stops evaluating node<br/>hands pointer to Janitor queue
+    Abandoned --> Free : Janitor thread runs destructor<br/>returns slot to pool
     Free --> [*] : engine shutdown<br/>pool slab freed
 ```
 
-Key invariants: the audio thread never calls `new` or `delete`. It only reads the slot pointer from the pool and writes a raw pointer to the Janitor queue. The Janitor is the only thread that runs destructors. A slot in the `Dead` state is invisible to the DSP graph — the audio thread will not touch it again after the handoff.
+Key invariants: the audio thread never calls `new` or `delete`. It only reads the slot pointer from the pool and writes a raw pointer to the Janitor queue. The Janitor is the only thread that runs destructors. A slot in the `Abandoned` state is invisible to the DSP graph — the audio thread will not touch it again after the handoff.
 
 ---
 
@@ -462,8 +463,9 @@ Node type registry: `AnyDSPNode = std::variant<WavetableOscillator, MasterOutput
 
 - `acquire<Node, Args>()` — atomic CAS `FREE → ACQUIRED`; constructs node in-place via `std::optional`.
 - `activate(id)` — audio thread only; CAS `ACQUIRED → ACTIVE`.
-- `deactivate(id)` — audio thread only; CAS `ACTIVE → INACTIVE`.
-- `recycle(id)` — Janitor only; destroys node, increments generation, CAS `INACTIVE → FREE`.
+- `deactivate(id)` — audio thread only; CAS `ACTIVE → ABANDONED`.
+- `abandon_acquired_node(id)` — main thread only; CAS `ACQUIRED → ABANDONED`; used when command queue push fails after acquire.
+- `recycle(id)` — Janitor only; destroys node, increments generation, CAS `ABANDONED → FREE`.
 - Handles are `uint64_t` packing `slot_idx (32) | generation (32)` via `std::bit_cast`. Generation prevents ABA on stale handles.
 
 **Janitor thread** (`core/janitor/janitor.hpp`) — `std::jthread` waiting on a semaphore. `enqueue_dead_node(id)` wakes it; it calls `pool.recycle()`. Only thread that runs node destructors. Drains remaining queue on engine stop before join.
