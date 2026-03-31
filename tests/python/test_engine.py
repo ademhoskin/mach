@@ -17,6 +17,19 @@ def test_remove_node(engine):
     engine.remove_node(osc)  # should not raise
 
 
+def test_connect(engine):
+    osc = engine.add_node("wavetable_oscillator")
+    out = engine.get_master_output()
+    engine.connect(osc, out)  # should not raise
+
+
+def test_disconnect(engine):
+    osc = engine.add_node("wavetable_oscillator")
+    out = engine.get_master_output()
+    engine.connect(osc, out)
+    engine.disconnect(osc, out)  # should not raise
+
+
 def test_pool_exhaustion_raises(engine):
     # NOTE: master output takes one slot at construction, so 15 fills the pool
     [engine.add_node("wavetable_oscillator") for _ in range(15)]

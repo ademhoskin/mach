@@ -26,9 +26,14 @@ struct ConnectNodesPayload {
     NodeId dest_id;
 };
 
+struct DisconnectNodesPayload {
+    NodeId source_id;
+    NodeId dest_id;
+};
+
 using CommandPayload =
     std::variant<AddNodePayload, RemoveNodePayload, SetNodeParamPayload,
-                 ConnectNodesPayload>;
+                 ConnectNodesPayload, DisconnectNodesPayload>;
 
 struct ScheduledCommandPayload {
     CommandPayload command;

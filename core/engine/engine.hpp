@@ -69,6 +69,9 @@ public:
     auto connect(NodeHandleID source, NodeHandleID dest) noexcept
         -> std::expected<void, EngineError>;
 
+    auto disconnect(NodeHandleID source, NodeHandleID dest) noexcept
+        -> std::expected<void, EngineError>;
+
     [[nodiscard]] auto get_master_output() const noexcept -> NodeHandleID;
 
     void play() noexcept;

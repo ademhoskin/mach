@@ -43,6 +43,9 @@ void EDFScheduler::dispatch_command(const engine::commands::detail::CommandPaylo
                            connections.add(payload.source_id, payload.dest_id)};
                        assert(added);
                    },
+                   [&](const DisconnectNodesPayload& payload) -> void {
+                       connections.remove(payload.source_id, payload.dest_id);
+                   },
                },
                cmd);
 }

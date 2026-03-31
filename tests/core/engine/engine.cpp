@@ -41,6 +41,28 @@ TEST_CASE_FIXTURE(TestAudioEngineFixture, "AudioEngine") {
               == EngineError::POOL_CAPACITY_EXCEEDED);
     }
 
+    SUBCASE("connect succeeds on valid handles") {
+        auto osc {engine.add_node<WavetableOscillator>().value()};
+        auto out {engine.get_master_output()};
+        CHECK(engine.connect(osc, out).has_value());
+    }
+
+    SUBCASE("disconnect succeeds on valid handles") {
+        auto osc {engine.add_node<WavetableOscillator>().value()};
+        auto out {engine.get_master_output()};
+        std::ignore = engine.connect(osc, out);
+        CHECK(engine.disconnect(osc, out).has_value());
+    }
+
+    SUBCASE("disconnect returns command queue full") {
+        auto osc {engine.add_node<WavetableOscillator>().value()};
+        auto out {engine.get_master_output()};
+        for (auto i {0UZ}; i < 1024UZ; ++i) {
+            std::ignore = engine.set_node_parameter(osc, 0U, TEST_FREQUENCY);
+        }
+        CHECK(engine.disconnect(osc, out).error() == EngineError::COMMAND_QUEUE_FULL);
+    }
+
     SUBCASE("add_node returns command queue full") {
         auto handle {engine.add_node<WavetableOscillator>().value()};
         for (auto i {0UZ}; i < 1024UZ; ++i) {

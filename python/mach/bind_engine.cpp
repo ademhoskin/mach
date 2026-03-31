@@ -52,6 +52,14 @@ void register_engine(nb::module_& m) {
                      throw_engine_error(result.error());
                  }
              })
+        .def("disconnect",
+             [](AudioEngine& engine, const NodeHandle& source,
+                const NodeHandle& dest) -> void {
+                 auto result = engine.disconnect(source.id, dest.id);
+                 if (!result) {
+                     throw_engine_error(result.error());
+                 }
+             })
         .def("get_master_output",
              [](AudioEngine& engine) -> NodeHandle {
                  NodeHandle handle;

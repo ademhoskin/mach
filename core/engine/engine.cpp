@@ -76,6 +76,15 @@ auto AudioEngine::connect(NodeHandleID source, NodeHandleID dest) noexcept
     return {};
 }
 
+auto AudioEngine::disconnect(NodeHandleID source, NodeHandleID dest) noexcept
+    -> std::expected<void, EngineError> {
+    if (!command_queue_.try_push(commands::detail::DisconnectNodesPayload {
+            .source_id = source, .dest_id = dest})) {
+        return std::unexpected<EngineError>(EngineError::COMMAND_QUEUE_FULL);
+    }
+    return {};
+}
+
 auto AudioEngine::get_master_output() const noexcept -> NodeHandleID {
     return master_output_id_;
 }
