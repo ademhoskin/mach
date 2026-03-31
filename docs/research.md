@@ -3,8 +3,8 @@
 ## Technical Design Document
 
 > **Status:** WIP
-> **Last Updated:** <!-- date -->
-> **Author:** <!-- name -->
+> **Last Updated:** 2026/03/31
+> **Author:** Adem Hoskin
 
 ---
 
@@ -234,20 +234,24 @@ The cardinal rule: **the audio thread never allocates.** All memory regions are 
 
 ```mermaid
 graph LR
-    DSP[DSP Graph<br/>Audio Thread]
-    JAN[Janitor Thread]
-    DIO[Disk I/O Thread]
-    TEL[Telemetry Thread]
-    PY[Python Controller]
+    subgraph Threads
+        DSP[DSP Graph<br/>Audio Thread]
+        JAN[Janitor Thread]
+        DIO[Disk I/O Thread]
+        TEL[Telemetry Thread]
+        PY[Python Controller]
+    end
 
-    NP[Node Pool]
-    SA[Scratch Arena]
-    AB[Asset Buffers]
-    TR[Telemetry Registry]
-    RB[Disk Write Ring Buffer]
-    SQ[SPSC Command Queue]
+    subgraph "Memory Regions"
+        NP[Node Pool]
+        SA[Scratch Arena]
+        AB[Asset Buffers]
+        TR[Telemetry Registry]
+        RB[Disk Write Ring Buffer]
+        SQ[SPSC Command Queue]
+    end
 
-    DSP -->|consumes slots| NP
+    DSP -->|activates & reads slots| NP
     DSP -->|bump alloc, reset per block| SA
     DSP -->|reads PCM data| AB
     DSP -->|relaxed atomics & ptr swaps| TR
@@ -257,6 +261,7 @@ graph LR
     JAN -->|returns dead slots| NP
     DIO -->|writes pre-loaded PCM| AB
     TEL -->|polls snapshots| TR
+    PY -->|acquires slots| NP
     PY -->|pushes commands| SQ
     PY -.->|zero-copy mdspan view| TR
 ```
@@ -281,8 +286,8 @@ stateDiagram-v2
     [*] --> Free : engine init<br/>(all slots start free)
     Free --> Acquired : add_node() —<br/>Python thread claims slot<br/>from pool (O1)
     Acquired --> Active : command pushed via SPSC<br/>audio thread initializes node<br/>into slot
-    Active --> Dead : remove_node() command<br/>audio thread stops evaluating node<br/>hands raw pointer to Janitor queue
-    Dead --> Free : Janitor thread runs destructor<br/>returns slot to pool
+    Active --> Inactive : remove_node() command<br/>audio thread stops evaluating node<br/>hands raw pointer to Janitor queue
+    Inactive --> Free : Janitor thread runs destructor<br/>returns slot to pool
     Free --> [*] : engine shutdown<br/>pool slab freed
 ```
 
@@ -376,31 +381,98 @@ graph LR
 
 ### 7.1 Python Controller & nanobind Bindings
 
-> **TODO**
+**Status: Implemented (Phase 1)**
+
+The Python surface lives in `python/mach/`. Module entry point is `bindings.cpp`; individual subsystems are registered via `bind_engine.cpp`, `bind_node_handle.cpp`, and `bind_enums.cpp`.
+
+**`EngineInitParams`** — nanobind class carrying `sample_rate`, `block_size`, `max_node_pool_size`.
+
+**`AudioEngine`** bindings:
+
+- `add_node(node_type: str)` → `NodeHandle` — string-dispatched template instantiation; populates `NodeHandle.param_map` from the node's static `get_params()`.
+- `remove_node(handle)`, `connect(source, dest)`, `get_master_output()`
+- `play()` / `stop()` — both use `nb::call_guard<nb::gil_scoped_release>()` to release the GIL during device I/O.
+
+**`NodeHandle`** — dict-like parameter interface. `handle["frequency"] = 440.0` coerces float/int/enum to float and calls `engine.set_node_parameter()`. `handle.params()` returns a name→ID dict for discovery.
+
+**`Waveform`** enum — `SINE`, `SAWTOOTH`, `TRIANGLE`, `SQUARE`.
+
+**`__init__.py`** re-exports all public names: `Engine`, `EngineInitParams`, `Waveform`, `NodeHandle`, `EngineError`.
 
 ### 7.2 SPSC Command Queue
 
-> **TODO**
+**Status: Implemented (Phase 1)**
+
+`core/ipc/spsc_queue.hpp` — lock-free, bounded, power-of-2 capacity.
+
+- `try_push()` / `try_pop()` — non-blocking; return false on full/empty.
+- Atomic read/write indices with `alignas(64)` to prevent false sharing.
+- Memory ordering: relaxed load + acquire/release on CAS to minimize fence overhead.
+- Template over any trivially copyable payload; instantiated over `Command` variants.
 
 ### 7.3 Event Scheduler
 
-> **TODO**
+**Status: Implemented (Phase 1)**
+
+`core/scheduler/scheduler.hpp` — EDF min-heap of `ScheduledCommand { deadline_abs_sample, payload }`.
+
+- `schedule(command, abs_sample)` — push to heap; heap maintains EDF ordering.
+- `process_block(block_start, block_end)` — pops all commands with `deadline < block_end`; dispatches them in deadline order. Called at block start on the audio thread.
+- `dispatch_command()` — `std::visit` over command variants:
+  - `AddNodePayload` → `pool.activate()`
+  - `RemoveNodePayload` → disconnect all edges, deactivate slot, enqueue to Janitor
+  - `SetNodeParamPayload` → fetch node, call `set_param()`
+  - `ConnectNodesPayload` → add edge to connection table
+- Heap pre-reserved at init — no allocations in the hot path.
 
 ### 7.4 DSP Graph & Audio Thread
 
-> **TODO**
+**Status: Implemented (Phase 1)**
+
+`core/engine/engine.cpp` — `audio_callback()` is the hard real-time entry point (`SCHED_FIFO` pri 99, never allocates).
+
+Per-block execution:
+
+1. Pop all pending commands from SPSC queue → push to EDF scheduler.
+2. `scheduler.process_block(block_start, block_end)` — dispatches due commands.
+3. Iterate active connections via `connection_table.for_each_connection()` — call `render_frame()` on each generator, then `mix_to_output()` on sinks.
+4. Advance `current_sample_` counter.
+
+**`ConnectionTable`** (`core/graph/connection_table.hpp`) — flat array of `{source_id, dest_id}` pairs; pre-allocated capacity. `add()`, `remove()` (swap-delete), `remove_all_for()`. No dynamic allocation after init.
+
+**Node concepts** (`core/nodes/node.hpp`):
+
+- `DSPNode<T>` — requires `set_sample_rate()`, `set_param()`, `get_params()`
+- `GeneratorNode<T>` — DSPNode + `render_frame()` + `FREQ_PARAM_ID` / `AMP_PARAM_ID`
+- `SinkNode<T>` — DSPNode + `mix_to_output()`
+
+Node type registry: `AnyDSPNode = std::variant<WavetableOscillator, MasterOutput>` in `core/nodes/all_nodes.hpp`.
+
+> **TODO:** Topological sort for DAG evaluation order — connections exist but traversal order is currently insertion order, not dependency order.
 
 ### 7.5 Telemetry System
 
-> **TODO**
+> **TODO (Phase 3)**
 
 ### 7.6 Memory Management
 
-> **TODO**
+**Status: Implemented (Phase 1)**
+
+`core/memory/node_pool.hpp` — fixed-size pool of `NodeSlot { atomic<SlotState>, optional<AnyDSPNode>, generation }`.
+
+- `acquire<Node, Args>()` — atomic CAS `FREE → ACQUIRED`; constructs node in-place via `std::optional`.
+- `activate(id)` — audio thread only; CAS `ACQUIRED → ACTIVE`.
+- `deactivate(id)` — audio thread only; CAS `ACTIVE → INACTIVE`.
+- `recycle(id)` — Janitor only; destroys node, increments generation, CAS `INACTIVE → FREE`.
+- Handles are `uint64_t` packing `slot_idx (32) | generation (32)` via `std::bit_cast`. Generation prevents ABA on stale handles.
+
+**Janitor thread** (`core/janitor/janitor.hpp`) — `std::jthread` waiting on a semaphore. `enqueue_dead_node(id)` wakes it; it calls `pool.recycle()`. Only thread that runs node destructors. Drains remaining queue on engine stop before join.
+
+> **TODO:** Scratch arena, asset buffer slab (Phase 2).
 
 ### 7.7 Disk I/O Thread
 
-> **TODO**
+> **TODO (Phase 4)**
 
 ---
 
@@ -408,27 +480,103 @@ graph LR
 
 ### 8.1 Python API
 
-> **TODO**
+**Status: Implemented (Phase 1)**
+
+```python
+import mach
+
+params = mach.EngineInitParams()
+params.sample_rate = 48000
+params.block_size = 512
+params.max_node_pool_size = 64
+
+engine = mach.Engine(params)
+osc = engine.add_node("wavetable_oscillator")
+out = engine.get_master_output()
+engine.connect(osc, out)
+
+osc["frequency"] = 440.0
+osc["amplitude"] = 0.5
+osc["waveform"] = mach.Waveform.SINE
+
+engine.play()
+# ...
+engine.stop()
+```
+
+`NodeHandle.__setitem__` accepts `float`, `int`, or `mach.Waveform` enum value and coerces to float before dispatch. Invalid parameter names raise `RuntimeError` immediately in Python.
 
 ### 8.2 Temporal API & Scheduling
 
-> **TODO**
+**Status: Partial (Phase 1)**
+
+The EDF scheduler accepts absolute sample timestamps. Commands pushed via SPSC carry a `deadline_abs_sample` field. The audio callback advances `current_sample_` each block, which the scheduler uses for deadline comparison.
+
+`engine.set_node_parameter()` currently dispatches commands with an immediate deadline (next block boundary). A `Beats` / `Seconds` scheduling surface has not yet been exposed to Python.
+
+> **TODO:** `engine.schedule(handle["frequency"], value=880.0, time=mach.Beats(1.0))` — temporal unit wrappers and the Python scheduling API.
 
 ### 8.3 Telemetry API
 
-> **TODO**
+> **TODO (Phase 3)**
 
 ---
 
 ## 9. DSP Node Catalogue
 
-> **TODO**
+### Implemented
+
+#### `WavetableOscillator` — `core/nodes/wavetable/`
+
+Generator node. Satisfies `GeneratorNode<WavetableOscillator>`.
+
+**Implementation:** Compile-time wavetable generation via `consteval` shape functors in `wavetable.hpp`. Wavetable lookup uses a 32-bit fixed-point phase accumulator; `get_interpolated_sample()` does linear interpolation between adjacent table entries.
+
+| Shape | Implementation |
+|---|---|
+| `SINE` | 6-term Maclaurin series |
+| `SAWTOOTH` | Linear ramp −π → π |
+| `TRIANGLE` | Absolute-value ramp |
+| `SQUARE` | Sign function |
+
+**Parameters:**
+
+| ID | Name | Type | Notes |
+|---|---|---|---|
+| `FREQ_PARAM_ID` | `"frequency"` | float (Hz) | Updates `phase_increment = freq / sample_rate * 2^32` |
+| `AMP_PARAM_ID` | `"amplitude"` | float [0, 1] | Linear gain applied at `render_frame()` |
+| `WAVEFORM_PARAM_ID` | `"waveform"` | `Waveform` enum | Swaps active wavetable at next `set_param()` |
+
+#### `MasterOutput` — `core/nodes/master_output/`
+
+Sink node. Satisfies `SinkNode<MasterOutput>`. `mix_to_output()` additively mixes into the hardware output buffer. No parameters.
+
+---
+
+### Planned (not yet implemented)
+
+See requirements in §4.1. Priority order tracks the phase milestones:
+
+| Phase | Node | Category |
+|---|---|---|
+| 2 | `FilterNode` (LPF/HPF) | Channel Strip |
+| 2 | `SamplerNode` | Generator |
+| 5 | `Reverb`, `Delay`, `Compressor`, `Limiter`, `Gate`, `Distortion` | Channel Strip |
+| 5 | `Bus`, `Send`, `Return`, `Splitter`, `SidechainInput` | Routing |
+| 5 | `VSTInstrumentHost`, `VSTEffectHost` | Generator / Channel Strip |
+| 5 | `AudioInput`, `AudioOutput`, `MIDIInput`, `MIDIOutput` | Hardware / IO |
 
 ---
 
 ## 10. Build System & Toolchain
 
-> **TODO**
+**CMake** — `CMakeLists.txt` at repo root.
+
+- C++23 (`-std=c++23`), Python 3.14, nanobind fetched via CMake FetchContent or find_package.
+- `miniaudio` compiled as a single-translation-unit C file (`core/engine/miniaudio_impl.c`) via `#define MINIAUDIO_IMPLEMENTATION`.
+- `SCHED_FIFO` requires `CAP_SYS_NICE` on Linux — document this in the README; do not silently fall back without warning.
+
+> **TODO:** document exact CMake targets, test runner integration, Python package install steps.
 
 ---
 
@@ -463,9 +611,11 @@ graph LR
 |---|---|---|
 | Scratch arena worst-case size | `max_nodes * max_channels * block_size * sizeof(float)` — but what are the max values? User-configured at engine init or compile-time constants? | Open |
 | Telemetry polling interval | Too fast = CPU waste, too slow = Python feels unresponsive. Configurable? Hardcoded? Adaptive? | Open |
-| SPSC full behavior — exact Python surface | `try_push()` returns false → Python raises immediately. What exception type? Is there a watermark warning before it hits the ceiling? | Open |
+| SPSC full behavior — exact Python surface | `try_push()` returns false → Python raises `RuntimeError`. Watermark warning not yet implemented. | Partially resolved |
 | `schedule()` with `at=` time in the past | Immediate execution? Silent drop? Raise? | Open |
 | Disk Write Ring Buffer drop behavior | Silent drop decided, but should the drop counter be a telemetry atomic or a separate signal/callback to Python? | Open |
+| `max_node_pool_size` | User-configurable via `EngineInitParams.max_node_pool_size` at engine init. Default: 64. | **Resolved** |
+| Node pool handle encoding | 64-bit packed handle: `slot_idx (32) \| generation (32)` via `std::bit_cast`. Prevents ABA. | **Resolved** |
 
 ### Known Gotchas
 
@@ -484,12 +634,13 @@ graph LR
 
 > Goal: prove the full vertical slice works end to end. Nothing fancy, just signal flowing from Python → C++ → speakers with no glitches.
 
-- [ ] `miniaudio` device callback running, filling a hardware buffer
-- [ ] SPSC queue implemented and wired to the audio thread
-- [ ] Single `WavetableOscillator` node (sine only) allocated from a node pool
-- [ ] `nanobind` wrapper — `Engine`, bare `NodeHandle`, `engine.play()` / `engine.stop()`
-- [ ] Python can boot the engine and hear a tone from a Jupyter cell
-- [ ] `engine.schedule(osc.set_frequency, value, time=mach.Beats(n))` works sample-accurately
+- [x] `miniaudio` device callback running, filling a hardware buffer
+- [x] SPSC queue implemented and wired to the audio thread
+- [x] Single `WavetableOscillator` node (sine only) allocated from a node pool — all 4 waveforms implemented (sine, saw, triangle, square)
+- [x] `nanobind` wrapper — `Engine`, `NodeHandle`, `engine.play()` / `engine.stop()`
+- [x] Python can boot the engine and hear a tone from a Jupyter cell
+- [x] EDF scheduler implemented and wired — sample-accurate dispatch proven
+- [ ] `engine.schedule(osc.set_frequency, value, time=mach.Beats(n))` — Python `Beats`/`Seconds` temporal wrapper not yet exposed
 
 **Exit criteria:** running a script in Jupyter that produces a frequency-modulated sine wave with no audio thread allocations and no glitches.
 
