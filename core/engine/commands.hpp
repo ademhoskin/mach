@@ -3,6 +3,7 @@
 #include "core/nodes/node.hpp"
 
 #include <cstdint>
+#include <type_traits>
 #include <variant>
 
 namespace mach::engine::commands::detail {
@@ -31,13 +32,19 @@ struct DisconnectNodesPayload {
     NodeId dest_id;
 };
 
+struct SetBpmPayload {
+    double bpm;
+};
+
 using CommandPayload =
     std::variant<AddNodePayload, RemoveNodePayload, SetNodeParamPayload,
-                 ConnectNodesPayload, DisconnectNodesPayload>;
+                 ConnectNodesPayload, DisconnectNodesPayload, SetBpmPayload>;
 
 struct ScheduledCommandPayload {
     CommandPayload command;
     uint64_t deadline_abs_sample;
 };
+
+static_assert(std::is_trivially_copyable_v<ScheduledCommandPayload>);
 
 } // namespace mach::engine::commands::detail

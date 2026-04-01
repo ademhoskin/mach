@@ -45,8 +45,7 @@ public:
     void remove_all_for(NodeHandleID node_id) noexcept {
         std::size_t i {0};
         while (i < count_) {
-            if (connections_[i].source == node_id
-                || connections_[i].dest == node_id) {
+            if (connections_[i].source == node_id || connections_[i].dest == node_id) {
                 connections_[i] = connections_[count_ - 1];
                 --count_;
             } else {
@@ -56,7 +55,7 @@ public:
     }
 
     template<typename F>
-    void for_each_connection(F&& func) const noexcept {
+    void for_each_connection(const F& func) const noexcept {
         auto conns {std::span {connections_.get(), count_}};
         for (const auto& conn : conns) {
             func(conn);

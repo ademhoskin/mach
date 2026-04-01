@@ -386,19 +386,30 @@ graph LR
 
 The Python surface lives in `python/mach/`. Module entry point is `bindings.cpp`; individual subsystems are registered via `bind_engine.cpp`, `bind_node_handle.cpp`, and `bind_enums.cpp`.
 
-**`EngineInitParams`** — nanobind class carrying `sample_rate`, `block_size`, `max_node_pool_size`.
+**`EngineInitParams`** — nanobind class carrying `sample_rate`, `block_size`, `max_node_pool_size`, `bpm`.
 
 **`AudioEngine`** bindings:
 
 - `add_node(node_type: str)` → `NodeHandle` — string-dispatched template instantiation; populates `NodeHandle.param_map` from the node's static `get_params()`.
-- `remove_node(handle)`, `connect(source, dest)`, `get_master_output()`
+- `remove_node(handle)`, `connect(source, dest)`, `disconnect(source, dest)`, `get_master_output()`
+- `set_bpm(bpm)` — immediate BPM change via SPSC queue. Validates bounds (0, 1000].
+- `schedule_set_bpm(bpm, time)` — scheduled BPM change at a future `TimeSpec` deadline.
 - `play()` / `stop()` — both use `nb::call_guard<nb::gil_scoped_release>()` to release the GIL during device I/O.
 
 **`NodeHandle`** — dict-like parameter interface. `handle["frequency"] = 440.0` coerces float/int/enum to float and calls `engine.set_node_parameter()`. `handle.params()` returns a name→ID dict for discovery.
 
 **`Waveform`** enum — `SINE`, `SAWTOOTH`, `TRIANGLE`, `SQUARE`.
 
-**`__init__.py`** re-exports all public names: `Engine`, `EngineInitParams`, `Waveform`, `NodeHandle`, `EngineError`.
+**Time unit types** (`core/common/time.hpp`, exposed via bindings):
+
+- `Samples(count)` — raw sample offset
+- `Seconds(value)` — wall-clock seconds
+- `Beats(value)` — musical beats (quarter note = 1.0)
+- `TimeSpec = std::variant<Samples, Seconds, Beats>` — accepted by `schedule()` methods
+
+**`mach.note` submodule** — constexpr `Beats` constants for musical note durations: `WHOLE` (4.0), `HALF` (2.0), `QUARTER` (1.0), `EIGHTH` (0.5), `SIXTEENTH` (0.25), `THIRTY_SECOND` (0.125), `SIXTY_FOURTH` (0.0625), plus dotted variants of each (1.5× duration).
+
+**`__init__.py`** re-exports all public names: `Engine`, `EngineInitParams`, `Waveform`, `NodeHandle`, `EngineError`, `Samples`, `Seconds`, `Beats`, `note`.
 
 ### 7.2 SPSC Command Queue
 
@@ -423,7 +434,8 @@ The Python surface lives in `python/mach/`. Module entry point is `bindings.cpp`
   - `AddNodePayload` → `pool.activate()`
   - `RemoveNodePayload` → disconnect all edges, deactivate slot, enqueue to Janitor
   - `SetNodeParamPayload` → fetch node, call `set_param()`
-  - `ConnectNodesPayload` → add edge to connection table
+  - `ConnectNodesPayload` / `DisconnectNodesPayload` → add/remove edge in connection table
+  - `SetBpmPayload` → `bpm_.store()` via `std::atomic<double>& bpm` passed into `process_block()`
 - Heap pre-reserved at init — no allocations in the hot path.
 
 ### 7.4 DSP Graph & Audio Thread
@@ -491,6 +503,7 @@ params = mach.EngineInitParams()
 params.sample_rate = 48000
 params.block_size = 512
 params.max_node_pool_size = 64
+params.bpm = 120.0
 
 engine = mach.Engine(params)
 osc = engine.add_node("wavetable_oscillator")
@@ -501,6 +514,12 @@ osc["frequency"] = 440.0
 osc["amplitude"] = 0.5
 osc["waveform"] = mach.Waveform.SINE
 
+# schedule a BPM change at beat 4
+engine.schedule_set_bpm(140.0, mach.Beats(4.0))
+
+# or use note constants
+engine.schedule_set_bpm(160.0, mach.note.WHOLE)
+
 engine.play()
 # ...
 engine.stop()
@@ -510,13 +529,23 @@ engine.stop()
 
 ### 8.2 Temporal API & Scheduling
 
-**Status: Partial (Phase 1)**
+**Status: Implemented (Phase 1)**
 
-The EDF scheduler accepts absolute sample timestamps. Commands pushed via SPSC carry a `deadline_abs_sample` field. The audio callback advances `current_sample_` each block, which the scheduler uses for deadline comparison.
+The SPSC queue carries `ScheduledCommandPayload { CommandPayload command, uint64_t deadline_abs_sample }`. Immediate commands use `deadline = 0`; scheduled commands compute the deadline on the Python thread via `to_abs_sample()`.
 
-`engine.set_node_parameter()` currently dispatches commands with an immediate deadline (next block boundary). A `Beats` / `Seconds` scheduling surface has not yet been exposed to Python.
+**Time units** (`core/common/time.hpp`):
 
-> **TODO:** `engine.schedule(handle["frequency"], value=880.0, time=mach.Beats(1.0))` — temporal unit wrappers and the Python scheduling API.
+- `Samples { uint64_t count }` — raw sample offset from current position
+- `Seconds { double value }` — `value * sample_rate`
+- `Beats { double value }` — `value * sample_rate * 60.0 / bpm`
+
+Conversion happens on the Python thread at `schedule()` call time using `current_sample_.load(relaxed)` and `bpm_.load(relaxed)`. The scheduler only sees absolute sample deadlines — no time unit logic in the hot path.
+
+**BPM** is a `std::atomic<double>` on `AudioEngine`. Python reads it (relaxed) for `to_abs_sample()` conversion; the audio thread writes it when dispatching `SetBpmPayload`. BPM changes are tempo-locked: already-scheduled events keep their sample positions. Subsequent `schedule()` calls read the new BPM.
+
+**Musical note constants** — `mach::note` namespace provides constexpr `Beats` values: `WHOLE` (4.0), `HALF` (2.0), `QUARTER` (1.0), `EIGHTH` (0.5), `SIXTEENTH` (0.25), `THIRTY_SECOND` (0.125), `SIXTY_FOURTH` (0.0625), plus dotted variants of each.
+
+> **TODO:** `engine.schedule()` for node parameter changes (currently only `schedule_set_bpm` is exposed).
 
 ### 8.3 Telemetry API
 
@@ -603,7 +632,7 @@ See requirements in §4.1. Priority order tracks the phase milestones:
 | Risk | Why It Matters |
 |---|---|
 | VST3 plugins allocating on the audio thread | VST3 spec does not forbid this. A misbehaving plugin breaks the one hard rule. Need a sandboxing or isolation strategy before Phase 5. |
-| BPM changes mid-timeline with queued events | Events are stamped in absolute samples at schedule time. A BPM change invalidates those stamps. Do queued events get re-stamped? Does the scheduler re-sort? Needs a decision before the temporal API is built. |
+| ~~BPM changes mid-timeline with queued events~~ | **Resolved.** Events are stamped in absolute samples at schedule time using the current BPM. A BPM change does not re-stamp already-queued events — they keep their original sample positions (tempo-locked). Subsequent `schedule()` calls read the new BPM from the atomic. |
 | Live graph mutations mid-evaluation | `add_node()` / `remove_node()` during an active audio callback. The command arrives via SPSC but the graph topology change has to be applied atomically from the audio thread's perspective. Wrong answer here = corruption or glitch. |
 | mdspan view lifetime across pointer swaps | User holds a zero-copy view reference in Python. Telemetry thread swaps the triple-buffer pointer. Is the old view now invalid? Need a clear contract on view lifetime before the telemetry API is finalized. |
 
@@ -642,7 +671,7 @@ See requirements in §4.1. Priority order tracks the phase milestones:
 - [x] `nanobind` wrapper — `Engine`, `NodeHandle`, `engine.play()` / `engine.stop()`
 - [x] Python can boot the engine and hear a tone from a Jupyter cell
 - [x] EDF scheduler implemented and wired — sample-accurate dispatch proven
-- [ ] `engine.schedule(osc.set_frequency, value, time=mach.Beats(n))` — Python `Beats`/`Seconds` temporal wrapper not yet exposed
+- [x] `engine.schedule_set_bpm(bpm, time)` — Python `Beats`/`Seconds`/`Samples` temporal wrappers and `mach.note` constants exposed
 
 **Exit criteria:** running a script in Jupyter that produces a frequency-modulated sine wave with no audio thread allocations and no glitches.
 

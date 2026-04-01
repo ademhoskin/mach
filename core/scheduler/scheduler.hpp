@@ -19,9 +19,9 @@ public:
                                 uint64_t deadline_in_abs_sample) noexcept -> bool;
 
     void process_block(uint64_t current_abs_sample, std::size_t block_size,
-                       memory::node_pool::NodePool& pool,
-                       janitor::JanitorThread& janitor,
-                       graph::ConnectionTable& connections) noexcept;
+                       memory::node_pool::NodePool& pool, janitor::JanitorThread& janitor,
+                       graph::ConnectionTable& connections,
+                       std::atomic<double>& bpm) noexcept;
 
 private:
     struct ScheduledCommand {
@@ -37,7 +37,8 @@ private:
     static void dispatch_command(const engine::commands::detail::CommandPayload& cmd,
                                  memory::node_pool::NodePool& pool,
                                  janitor::JanitorThread& janitor,
-                                 graph::ConnectionTable& connections) noexcept;
+                                 graph::ConnectionTable& connections,
+                                 std::atomic<double>& bpm) noexcept;
 
     std::vector<ScheduledCommand> heap_;
 };

@@ -27,6 +27,8 @@ inline void throw_engine_error(mach::engine::EngineError err) {
             throw std::runtime_error("pool capacity exceeded");
         case mach::engine::EngineError::COMMAND_QUEUE_FULL:
             throw std::runtime_error("command queue full");
+        case mach::engine::EngineError::INVALID_PARAMETER:
+            throw std::runtime_error("invalid parameter");
     }
 }
 
