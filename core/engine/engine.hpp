@@ -24,7 +24,7 @@ enum class EngineError : uint8_t { POOL_CAPACITY_EXCEEDED, COMMAND_QUEUE_FULL };
 
 class AudioEngine {
 public:
-    explicit AudioEngine(const EngineInitParams& params) noexcept;
+    explicit AudioEngine(const EngineInitParams& params);
     ~AudioEngine() noexcept;
 
     AudioEngine(const AudioEngine&) = delete;

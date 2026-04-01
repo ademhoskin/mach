@@ -11,7 +11,7 @@
 #include <string>
 
 namespace mach::engine {
-AudioEngine::AudioEngine(const EngineInitParams& params) noexcept
+AudioEngine::AudioEngine(const EngineInitParams& params)
     : node_pool_ {params.max_node_pool_size},
       command_queue_ {
           std::bit_ceil(static_cast<std::size_t>(params.max_node_pool_size) * 4UZ)},
@@ -22,7 +22,8 @@ AudioEngine::AudioEngine(const EngineInitParams& params) noexcept
                 std::bit_ceil(static_cast<std::size_t>(params.max_node_pool_size))},
       connection_table_ {
           std::bit_ceil(static_cast<std::size_t>(params.max_node_pool_size) * 16UZ)} {
-    auto master {node_pool_.acquire<nodes::master_output::MasterOutput>(params.sample_rate)};
+    auto master {
+        node_pool_.acquire<nodes::master_output::MasterOutput>(params.sample_rate)};
     assert(master);
     master_output_id_ = master.value();
     [[maybe_unused]] auto activated {node_pool_.activate(master_output_id_)};
@@ -114,7 +115,7 @@ void AudioEngine::stop() noexcept {
     }
 
     event_scheduler_.process_block(current_sample_, 0, node_pool_, janitor_,
-                                    connection_table_);
+                                   connection_table_);
 }
 
 // NOLINTNEXTLINE we are matching miniaudio API
@@ -143,34 +144,32 @@ void AudioEngine::audio_callback(ma_device* device, void* output, const void* in
     std::array<float, 8192> scratch {};
     auto scratch_span {std::span {scratch.data(), frame_count * 2UZ}};
 
-    engine->connection_table_.for_each_connection(
-        [&](const graph::Connection& conn) -> void {
-            auto source {engine->node_pool_.get_node(conn.source)};
-            auto dest {engine->node_pool_.get_node(conn.dest)};
-            if (!source || !dest) {
-                return;
-            }
+    engine->connection_table_.for_each_connection([&](const graph::Connection& conn)
+                                                      -> void {
+        auto source {engine->node_pool_.get_node(conn.source)};
+        auto dest {engine->node_pool_.get_node(conn.dest)};
+        if (!source || !dest) {
+            return;
+        }
 
-            std::ranges::fill(scratch_span, 0.0F);
+        std::ranges::fill(scratch_span, 0.0F);
 
-            std::visit(
-                [&](auto& src_node) -> void {
-                    if constexpr (nodes::GeneratorNode<
-                                      std::decay_t<decltype(src_node)>>) {
-                        src_node.render_frame(scratch_span);
-                    }
-                },
-                *source.value());
+        std::visit(
+            [&](auto& src_node) -> void {
+                if constexpr (nodes::GeneratorNode<std::decay_t<decltype(src_node)>>) {
+                    src_node.render_frame(scratch_span);
+                }
+            },
+            *source.value());
 
-            std::visit(
-                [&](auto& dst_node) -> void {
-                    if constexpr (nodes::SinkNode<
-                                      std::decay_t<decltype(dst_node)>>) {
-                        dst_node.mix_to_output(scratch_span, output_buffer);
-                    }
-                },
-                *dest.value());
-        });
+        std::visit(
+            [&](auto& dst_node) -> void {
+                if constexpr (nodes::SinkNode<std::decay_t<decltype(dst_node)>>) {
+                    dst_node.mix_to_output(scratch_span, output_buffer);
+                }
+            },
+            *dest.value());
+    });
 
     engine->current_sample_ += frame_count;
 }
