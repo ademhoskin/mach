@@ -37,32 +37,35 @@ constexpr Beats SIXTY_FOURTH {0.0625};
 constexpr Beats DOTTED_SIXTY_FOURTH {0.09375};
 } // namespace note
 
-[[nodiscard]] inline uint64_t to_abs_sample(TimeSpec time, uint64_t current_abs_sample,
-                                            uint32_t sample_rate,
-                                            double bpm) noexcept {
+[[nodiscard]] inline auto to_abs_sample(TimeSpec time, uint64_t current_abs_sample,
+                                        uint32_t sample_rate, double bpm) noexcept
+    -> uint64_t {
     return std::visit(
         [&]<typename T>(T spec) -> uint64_t {
-            if constexpr (std::same_as<T, Samples>)
+            if constexpr (std::same_as<T, Samples>) {
                 return current_abs_sample + spec.count;
-            else if constexpr (std::same_as<T, Seconds>)
-                return current_abs_sample + static_cast<uint64_t>(spec.value * sample_rate);
-            else
-                return current_abs_sample +
-                       static_cast<uint64_t>(spec.value * sample_rate * 60.0 / bpm);
+            } else if constexpr (std::same_as<T, Seconds>) {
+                return current_abs_sample
+                       + static_cast<uint64_t>(spec.value * sample_rate);
+            } else {
+                return current_abs_sample
+                       + static_cast<uint64_t>(spec.value * sample_rate * 60.0 / bpm);
+            }
         },
         time);
 }
 
-[[nodiscard]] inline double to_seconds(TimeSpec time, uint32_t sample_rate,
-                                       double bpm) noexcept {
+[[nodiscard]] inline auto to_seconds(TimeSpec time, uint32_t sample_rate,
+                                     double bpm) noexcept -> double {
     return std::visit(
         [&]<typename T>(T spec) -> double {
-            if constexpr (std::same_as<T, Samples>)
+            if constexpr (std::same_as<T, Samples>) {
                 return static_cast<double>(spec.count) / sample_rate;
-            else if constexpr (std::same_as<T, Seconds>)
+            } else if constexpr (std::same_as<T, Seconds>) {
                 return spec.value;
-            else
+            } else {
                 return spec.value * 60.0 / bpm;
+            }
         },
         time);
 }
