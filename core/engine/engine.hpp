@@ -92,7 +92,7 @@ private:
     janitor::JanitorThread janitor_;
     graph::ConnectionTable connection_table_;
     NodeHandleID master_output_id_;
-    uint64_t current_sample_ {0ULL};
+    std::atomic<uint64_t> current_sample_ {0ULL};
 };
 
 } // namespace mach::engine

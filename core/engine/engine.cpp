@@ -171,7 +171,7 @@ void AudioEngine::audio_callback(ma_device* device, void* output, const void* in
             *dest.value());
     });
 
-    engine->current_sample_ += frame_count;
+    engine->current_sample_.fetch_add(frame_count, std::memory_order_relaxed);
 }
 
 } // namespace mach::engine
