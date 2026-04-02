@@ -22,6 +22,7 @@
  *          the `std::jthread` is joined.
  */
 
+/// @brief Background thread for deferred DSP node recycling.
 namespace mach::janitor {
 
 /**

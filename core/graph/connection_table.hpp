@@ -20,6 +20,7 @@
  *          elements.
  */
 
+/// @brief Flat pre-allocated table of directed DSP graph edges.
 namespace mach::graph {
 
 /// @brief Type alias matching `NodePool`'s opaque handle type.

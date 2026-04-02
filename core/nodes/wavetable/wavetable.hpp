@@ -20,6 +20,7 @@
  *       stateless and reentrant. Safe to call from the audio thread.
  */
 
+/// @brief Compile-time wavetable shapes and the interpolating Wavetable<> template.
 namespace mach::nodes::wavetable {
 
 // TODO: split shapes
@@ -159,7 +160,7 @@ public:
      * @param PHASE Full-range uint32_t phase accumulator (wraps at 2^32).
      * @return Interpolated sample value in the shape's output range.
      *
-     * @complexity O(1)
+     * @par Complexity O(1)
      * @note **Thread Safety:** Audio Thread. Real-time Safe.
      */
     [[nodiscard]] static auto get_interpolated_sample(const uint32_t PHASE) noexcept

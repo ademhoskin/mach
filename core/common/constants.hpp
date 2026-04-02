@@ -12,6 +12,7 @@
  * @note All values are compile-time constants. No thread safety concerns apply.
  */
 
+/// @brief Compile-time constants shared across all engine subsystems.
 namespace mach::constants {
 
 /**

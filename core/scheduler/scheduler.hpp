@@ -23,6 +23,7 @@
  *          `schedule()` returns `false` and the command is dropped.
  */
 
+/// @brief EDF event scheduler for sample-accurate command dispatch.
 namespace mach::scheduler {
 
 /**

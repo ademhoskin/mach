@@ -18,6 +18,7 @@
  *          the producer and consumer cores.
  */
 
+/// @brief Lock-free inter-thread communication primitives.
 namespace mach::ipc {
 
 /**

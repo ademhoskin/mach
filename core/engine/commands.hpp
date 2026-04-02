@@ -21,6 +21,7 @@
  *       The `static_assert` on `ScheduledCommandPayload` enforces this.
  */
 
+/// @brief Command payload types carried through the SPSC queue.
 namespace mach::engine::commands::detail {
 
 /// @brief Opaque node identifier — a packed `(slot_idx, generation)` pair cast to

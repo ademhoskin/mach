@@ -33,6 +33,7 @@
  *          5. `current_sample_` is incremented by `frame_count`.
  */
 
+/// @brief Top-level AudioEngine and engine configuration types.
 namespace mach::engine {
 
 /**

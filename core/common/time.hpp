@@ -14,6 +14,7 @@
  *          sample position or a wall-clock duration.
  */
 
+/// @brief Root namespace for the mach audio engine.
 namespace mach {
 
 /**
@@ -61,6 +62,7 @@ using TimeSpec = std::variant<Samples, Seconds, Beats>;
  *
  * @note **Thread Safety:** Compile-time constants — no thread concerns.
  */
+/// @brief Named musical duration constants expressed as `Beats`.
 namespace note {
 constexpr Beats WHOLE {4.0};                   ///< Whole note (4 beats).
 constexpr Beats DOTTED_WHOLE {6.0};            ///< Dotted whole note (6 beats).

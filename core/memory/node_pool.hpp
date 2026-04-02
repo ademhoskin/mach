@@ -31,6 +31,7 @@
  * @note This file assumes a little-endian target for the `bit_cast` handle packing.
  */
 
+/// @brief Fixed-capacity generation-tagged object pool for DSP nodes.
 namespace mach::memory::node_pool {
 
 // Project targets little endian

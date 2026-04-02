@@ -18,3 +18,8 @@ python/mach/_mach_ext*.so
 .vscode/
 *.swp
 *.swo
+
+# Doxygen
+docs/html/
+docs/latex/
+

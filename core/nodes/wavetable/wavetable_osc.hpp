@@ -19,6 +19,7 @@
  *          sample.
  */
 
+/// @brief WavetableOscillator DSP node.
 namespace mach::nodes::wavetable {
 
 /// @brief Selects which pre-generated wavetable the oscillator reads from.
@@ -79,7 +80,7 @@ public:
      * @param output Interleaved stereo (or mono) output buffer to accumulate into.
      *               Size must equal `frame_count * channels`.
      *
-     * @complexity O(N) where N = `output.size()`.
+     * @par Complexity O(N) where N = `output.size()`.
      * @note **Thread Safety:** Audio Thread. Real-time Safe.
      */
     void render_frame(std::span<float> output) noexcept {

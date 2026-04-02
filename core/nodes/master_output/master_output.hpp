@@ -20,6 +20,7 @@
  *          `AudioEngine` construction and never removed.
  */
 
+/// @brief Terminal sink node that mixes generator output into the hardware buffer.
 namespace mach::nodes::master_output {
 
 /**
@@ -80,7 +81,7 @@ public:
      * @param output Hardware output buffer to accumulate into. Must be pre-zeroed by
      *               the audio callback before the first mix call each block.
      *
-     * @complexity O(N) where N = `min(INPUT.size(), output.size())`.
+     * @par Complexity O(N) where N = `min(INPUT.size(), output.size())`.
      * @note **Thread Safety:** Audio Thread. Real-time Safe.
      */
     static void mix_to_output(const std::span<const float> INPUT,

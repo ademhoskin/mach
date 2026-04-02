@@ -15,6 +15,7 @@
  *          branch-predictable and cache-friendly.
  */
 
+/// @brief DSP node concepts, parameter types, and node variant registration.
 namespace mach::nodes {
 
 /**
