@@ -10,6 +10,21 @@ struct Overloaded : Ts... {
     using Ts::operator()...;
 };
 
+/**
+ * @brief Executes a single command against the engine subsystems.
+ *
+ * @details Uses a local `Overloaded` visitor to dispatch on the `CommandPayload`
+ *          variant. Each lambda is a direct, allocation-free mutation of the passed
+ *          subsystem references.
+ *
+ * @param cmd         Command to dispatch.
+ * @param pool        Node pool for slot lifecycle transitions.
+ * @param janitor     Receives handles of nodes moving to `ABANDONED`.
+ * @param connections DSP graph edge table.
+ * @param bpm         Atomic BPM — updated by `SetBpmPayload`.
+ *
+ * @note **Thread Safety:** Audio Thread. Real-time Safe.
+ */
 void EDFScheduler::dispatch_command(const engine::commands::detail::CommandPayload& cmd,
                                     memory::node_pool::NodePool& pool,
                                     janitor::JanitorThread& janitor,
@@ -57,6 +72,18 @@ EDFScheduler::EDFScheduler(std::size_t heap_size) {
     heap_.reserve(heap_size);
 }
 
+/**
+ * @brief Inserts a command into the EDF min-heap.
+ *
+ * @details Returns `false` without modifying the heap if `size == capacity` (the vector
+ *          was fully pre-reserved; `push_back` would allocate).
+ *
+ * @param command                Payload to schedule.
+ * @param deadline_in_abs_sample Target sample position.
+ * @return `true` if inserted; `false` if the heap is full.
+ *
+ * @note **Thread Safety:** Audio Thread. Real-time Safe.
+ */
 auto EDFScheduler::schedule(const engine::commands::detail::CommandPayload& command,
                             uint64_t deadline_in_abs_sample) noexcept -> bool {
     [[unlikely]] if (heap_.size() == heap_.capacity()) { return false; }
@@ -66,6 +93,22 @@ auto EDFScheduler::schedule(const engine::commands::detail::CommandPayload& comm
     return true;
 }
 
+/**
+ * @brief Dispatches all commands due within `[current_abs_sample, block_end)`.
+ *
+ * @details Pops from the min-heap while the front element's deadline is strictly less
+ *          than `current_abs_sample + block_size`. Commands with `deadline = 0` satisfy
+ *          this condition for any non-empty block and fire immediately.
+ *
+ * @param current_abs_sample Start of the current block.
+ * @param block_size         Frames in this callback.
+ * @param pool               Node pool.
+ * @param janitor            Janitor thread for recycling abandoned nodes.
+ * @param connections        Connection table.
+ * @param bpm                Atomic BPM.
+ *
+ * @note **Thread Safety:** Audio Thread. Real-time Safe.
+ */
 void EDFScheduler::process_block(uint64_t current_abs_sample, std::size_t block_size,
                                  memory::node_pool::NodePool& pool,
                                  janitor::JanitorThread& janitor,

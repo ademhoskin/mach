@@ -3,6 +3,32 @@
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/unordered_map.h>
 
+/**
+ * @file bind_node_handle.cpp
+ * @brief Registers the `NodeHandle` type with the Python module.
+ *
+ * @details `NodeHandle` is an opaque Python object — users cannot construct one
+ *          directly; they are returned by `Engine.add_node()` and
+ *          `Engine.get_master_output()`. The only Python-visible operations are
+ *          parameter assignment via `__setitem__` (e.g. `osc["frequency"] = 440`)
+ *          and `params()` for introspection.
+ */
+
+/**
+ * @brief Registers `NodeHandle` into the nanobind module.
+ *
+ * @details Exposes two operations:
+ *          - `__setitem__(name, value)`: coerces `value` to `float` (accepting Python
+ *            `float`, `int`, or a nanobind enum with a `.value` attribute), then calls
+ *            `engine->set_node_parameter()` immediately (deadline = 0).
+ *          - `params()`: returns the `param_map` as a Python `dict[str, int]` for
+ *            introspection.
+ *
+ * @param m The `_mach_ext` module object.
+ *
+ * @note **Thread Safety:** Python/Main Thread — called once during module
+ *       initialisation.
+ */
 void register_node_handle(nb::module_& m) {
     nb::class_<NodeHandle>(m, "NodeHandle")
         .def("__setitem__",

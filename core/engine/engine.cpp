@@ -15,6 +15,23 @@
 
 
 namespace mach::engine {
+
+/**
+ * @brief Constructs the engine, pre-allocates all subsystem memory, and opens the
+ *        miniaudio playback device.
+ *
+ * @details Capacity sizing:
+ *          - SPSC queue: `bit_ceil(max_node_pool_size * 4)` — headroom for rapid
+ *            bursts of add/remove/connect commands.
+ *          - EDF heap: same size as the SPSC queue.
+ *          - Janitor dead queue: `bit_ceil(max_node_pool_size)`.
+ *          - Connection table: `bit_ceil(max_node_pool_size * 16)`.
+ *
+ *          The `MasterOutput` node is acquired and activated here, bypassing the SPSC
+ *          queue, because it must be live before `play()` is called.
+ *
+ * @note **Thread Safety:** Python/Main Thread.
+ */
 AudioEngine::AudioEngine(const EngineInitParams& params)
     : node_pool_ {params.max_node_pool_size},
       command_queue_ {
@@ -51,10 +68,16 @@ AudioEngine::AudioEngine(const EngineInitParams& params)
     }
 }
 
+/**
+ * @note **Thread Safety:** Python/Main Thread. Call `stop()` first.
+ */
 AudioEngine::~AudioEngine() noexcept {
     ma_device_uninit(&device_);
 }
 
+/**
+ * @note **Thread Safety:** Python/Main Thread.
+ */
 auto AudioEngine::remove_node(const AudioEngine::NodeHandleID& handle) noexcept
     -> std::expected<void, EngineError> {
     if (!command_queue_.try_push(
@@ -66,6 +89,9 @@ auto AudioEngine::remove_node(const AudioEngine::NodeHandleID& handle) noexcept
     return {};
 }
 
+/**
+ * @note **Thread Safety:** Python/Main Thread.
+ */
 auto AudioEngine::set_node_parameter(AudioEngine::NodeHandleID handle, uint32_t param_id,
                                      float value) noexcept
     -> std::expected<void, EngineError> {
@@ -79,6 +105,9 @@ auto AudioEngine::set_node_parameter(AudioEngine::NodeHandleID handle, uint32_t 
     return {};
 }
 
+/**
+ * @note **Thread Safety:** Python/Main Thread.
+ */
 auto AudioEngine::connect(NodeHandleID source, NodeHandleID dest) noexcept
     -> std::expected<void, EngineError> {
     if (!command_queue_.try_push(
@@ -90,6 +119,9 @@ auto AudioEngine::connect(NodeHandleID source, NodeHandleID dest) noexcept
     return {};
 }
 
+/**
+ * @note **Thread Safety:** Python/Main Thread.
+ */
 auto AudioEngine::disconnect(NodeHandleID source, NodeHandleID dest) noexcept
     -> std::expected<void, EngineError> {
     if (!command_queue_.try_push(
@@ -101,6 +133,9 @@ auto AudioEngine::disconnect(NodeHandleID source, NodeHandleID dest) noexcept
     return {};
 }
 
+/**
+ * @note **Thread Safety:** Python/Main Thread.
+ */
 auto AudioEngine::set_bpm(double bpm) noexcept -> std::expected<void, EngineError> {
     if (bpm <= 0.0 || bpm > 1000.0) {
         return std::unexpected<EngineError>(EngineError::INVALID_PARAMETER);
@@ -113,6 +148,9 @@ auto AudioEngine::set_bpm(double bpm) noexcept -> std::expected<void, EngineErro
     return {};
 };
 
+/**
+ * @note **Thread Safety:** Python/Main Thread.
+ */
 auto AudioEngine::schedule(commands::detail::CommandPayload cmd, TimeSpec time) noexcept
     -> std::expected<void, EngineError> {
     uint64_t deadline {to_abs_sample(
@@ -124,6 +162,13 @@ auto AudioEngine::schedule(commands::detail::CommandPayload cmd, TimeSpec time) 
     return {};
 }
 
+/**
+ * @details Dispatches on the `TimeSpec` variant. `Beats` mode polls `steady_clock` in
+ *          1 ms intervals, draining `remaining_beats` using a live `bpm_` read each
+ *          iteration so tempo changes during a sleep are respected.
+ *
+ * @note **Thread Safety:** Python/Main Thread. GIL released by nanobind binding.
+ */
 void AudioEngine::sleep(TimeSpec time) noexcept {
     using namespace std::chrono;
     constexpr auto POLL_INTERVAL {1ms};
@@ -154,10 +199,16 @@ void AudioEngine::sleep(TimeSpec time) noexcept {
         time);
 }
 
+/**
+ * @note **Thread Safety:** Any thread (immutable after construction).
+ */
 auto AudioEngine::get_master_output() const noexcept -> NodeHandleID {
     return master_output_id_;
 }
 
+/**
+ * @note **Thread Safety:** Python/Main Thread. GIL released by nanobind binding.
+ */
 void AudioEngine::play() noexcept {
     ma_result result = ma_device_start(&device_);
     if (result != MA_SUCCESS) {
@@ -167,6 +218,9 @@ void AudioEngine::play() noexcept {
     }
 }
 
+/**
+ * @note **Thread Safety:** Python/Main Thread. GIL released by nanobind binding.
+ */
 void AudioEngine::stop() noexcept {
     ma_result result = ma_device_stop(&device_);
     if (result != MA_SUCCESS) {
@@ -187,6 +241,21 @@ void AudioEngine::stop() noexcept {
                                    node_pool_, janitor_, connection_table_, bpm_);
 }
 
+/**
+ * @details Per-block steps:
+ *          1. Drain SPSC into the EDF heap (wait-free `try_pop` loop).
+ *          2. `process_block()` — fire all commands due this block.
+ *          3. Zero the output buffer.
+ *          4. For each connection: render source generator into the scratch buffer,
+ *             mix via sink into the hardware output buffer.
+ *          5. Increment `current_sample_` by `frame_count` (`relaxed`).
+ *
+ *          The scratch buffer is a fixed-size `std::array<float, 8192>` on the stack —
+ *          no heap allocation. It is zeroed before each generator render via
+ *          `std::ranges::fill`.
+ *
+ * @note **Thread Safety:** Audio Thread (SCHED_FIFO priority 99). Real-time Safe.
+ */
 // NOLINTNEXTLINE we are matching miniaudio API
 void AudioEngine::audio_callback(ma_device* device, void* output, const void* input,
                                  ma_uint32 frame_count) {
