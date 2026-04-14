@@ -47,7 +47,7 @@ AudioEngine::AudioEngine(const EngineInitParams& params)
 
     auto master_output {
         node_pool_.acquire<nodes::master_output::MasterOutput>(params.sample_rate)};
-    assert(master);
+    assert(master_output);
 
     master_output_id_ = master_output.value();
     [[maybe_unused]] auto activated {node_pool_.activate(master_output_id_)};
