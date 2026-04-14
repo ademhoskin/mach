@@ -98,11 +98,11 @@ No GUI, no DAW, no destructive editing, no waveform rendering, no networking, no
 
 **Phase 1 — Proof of Concept.** Goal: sine wave out of a Jupyter cell, end to end, no audio thread allocations.
 
-- [ ] `miniaudio` device callback
-- [ ] SPSC queue
-- [ ] Single `WavetableOscillator` node from pool
-- [ ] `nanobind` wrapper — `Engine`, `NodeHandle`, `play()` / `stop()`
-- [ ] Sample-accurate `schedule()` working
+- [x] `miniaudio` device callback
+- [x] SPSC queue
+- [x] Single `WavetableOscillator` node from pool
+- [x] `nanobind` wrapper — `Engine`, `NodeHandle`, `play()` / `stop()`
+- [x] Sample-accurate `schedule()` working
 
 ## References
 
